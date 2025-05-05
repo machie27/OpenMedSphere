@@ -1,0 +1,46 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36025.13
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenMedSphere.AppHost", "OpenMedSphere.AppHost\OpenMedSphere.AppHost.csproj", "{19C5D29A-9614-43D1-B87E-6205390D5480}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenMedSphere.ServiceDefaults", "OpenMedSphere.ServiceDefaults\OpenMedSphere.ServiceDefaults.csproj", "{77995C4E-BED7-AE6A-CD7D-48BAA8E0DEA5}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{089100B1-113F-4E66-888A-E83F3999EAFD}"
+	ProjectSection(SolutionItems) = preProject
+		.gitignore = .gitignore
+		Directory.Build.props = Directory.Build.props
+		Directory.Packages.props = Directory.Packages.props
+		LICENSE = LICENSE
+		README.md = README.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{827E0CD3-B72D-47B6-A68D-7590B98EB39B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{19C5D29A-9614-43D1-B87E-6205390D5480}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{19C5D29A-9614-43D1-B87E-6205390D5480}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{19C5D29A-9614-43D1-B87E-6205390D5480}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{19C5D29A-9614-43D1-B87E-6205390D5480}.Release|Any CPU.Build.0 = Release|Any CPU
+		{77995C4E-BED7-AE6A-CD7D-48BAA8E0DEA5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{77995C4E-BED7-AE6A-CD7D-48BAA8E0DEA5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{77995C4E-BED7-AE6A-CD7D-48BAA8E0DEA5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{77995C4E-BED7-AE6A-CD7D-48BAA8E0DEA5}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{19C5D29A-9614-43D1-B87E-6205390D5480} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{77995C4E-BED7-AE6A-CD7D-48BAA8E0DEA5} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {10F79C56-2A64-42DD-A594-C7EC4E1FBC91}
+	EndGlobalSection
+EndGlobal
