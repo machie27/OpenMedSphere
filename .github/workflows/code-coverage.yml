@@ -1,0 +1,23 @@
+# For most projects, this workflow file will not need changing; you simply need
+# to commit it to your repository.
+name: "PR validation"
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  test:
+    name: "Test"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      - name: Build solution
+        run: dotnet build OpenMedSphere.sln
