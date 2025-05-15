@@ -5,11 +5,15 @@
   <ItemGroup>
     <!--Aspire-->
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="9.2.1" />
-    
+    <!--Asp core-->
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="9.0.5" />
+    <!--Blazor-->
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly" Version="9.0.5" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="9.0.5" />
     <!--Extensions-->
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="9.4.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="9.2.1" />
-    
+    <PackageVersion Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.22.1-Preview.1" />
     <!--Telemetry-->
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.12.0" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.12.0" />

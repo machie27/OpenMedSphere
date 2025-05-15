@@ -12,5 +12,9 @@
     <PackageReference Include="Aspire.Hosting.AppHost" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\OpenMedSphere.API\OpenMedSphere.API.csproj" />
+  </ItemGroup>
+
 </Project>
 
