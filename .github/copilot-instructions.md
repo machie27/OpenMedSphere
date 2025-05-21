@@ -22,10 +22,13 @@ Nullable Reference Types
  
 Testing
 
- * We use xUnit SDK v3 for tests.
+ * Use xUnit for tests.
  * Do not emit "Act", "Arrange" or "Assert" comments.
  * Use Moq for mocking in tests.
- * Copy existing style in nearby files for test method names and capitalization
+ * Unit testing should adhere to [Unit Testing Best Practices](https://learn.microsoft.com/en-us/dotnet/core/testing/unit-testing-best-practices)
+   * Name unit tests with `[name of method]_[test scenario]_[expected behavior]`
+     * Extension: Name the test class with [name of the class being tested]Tests
+
 
 Running tests
 
