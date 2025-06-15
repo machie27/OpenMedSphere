@@ -2,6 +2,7 @@ General
 
  * Make only high confidence suggestions when reviewing code changes.
  * Always use the latest version C#, currently C# 13 features.
+ * Do not add new libraries or NuGet packages unless explicitly requested.
 
 Formatting
 
@@ -43,3 +44,6 @@ Architecture
  * Use the Factory pattern for creating objects.
  * Use the Adapter pattern for integrating with external systems.
  * Use the Observer pattern for event handling.
+ * Use the Builder pattern for constructing complex objects.
+ * Use the inbox/outbox pattern for managing distributed transactions.
+ * Use the mediator pattern for decoupling components. 
