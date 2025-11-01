@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\OpenMedSphere.API\OpenMedSphere.API.csproj" />
+    <ProjectReference Include="..\OpenMedSphere.Web\OpenMedSphere.Web.csproj" />
   </ItemGroup>
 
 </Project>
