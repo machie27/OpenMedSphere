@@ -1,7 +1,7 @@
 General
 
  * Make only high confidence suggestions when reviewing code changes.
- * Always use the latest version C#, currently C# 13 features.
+ * Always use the latest version C#, currently C# 14 features.
  * Do not add new libraries or NuGet packages unless explicitly requested.
 
 Formatting
@@ -47,3 +47,4 @@ Architecture
  * Use the Builder pattern for constructing complex objects.
  * Use the inbox/outbox pattern for managing distributed transactions.
  * Use the mediator pattern for decoupling components. 
+ * Prefer minimal APIs and if needed you can use the FastEndpoints library for building APIs.
