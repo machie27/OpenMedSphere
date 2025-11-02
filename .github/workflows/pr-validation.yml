@@ -18,6 +18,6 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '10.x'
       - name: Build solution
-        run: dotnet build OpenMedSphere.sln
+        run: dotnet build OpenMedSphere.slnx
