@@ -3,7 +3,7 @@ I'd like to begin by saying that, while I've always had a fascination with medic
 
 ## Vision:
 
-Create an open-source, secure, scalable, and collaborative platform specifically tailored for medical researchers to securely process, share, and visualize anonymized patient data, leveraging cutting-edge quantum-safe encryption and cloud-native technologies. The platform should be easy to self-host, allowing institutions and researchers full control over their data and infrastructure.
+Create an open-source, secure, scalable, and collaborative platform specifically tailored for medical researchers to securely process, share, and visualize anonymized patient data, leveraging cutting-edge quantum-safe encryption technologies. The platform should be easy to self-host, allowing institutions and researchers full control over their data and infrastructure.
 
 ## Technology Stack:
 
