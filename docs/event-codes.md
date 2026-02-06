@@ -50,11 +50,11 @@ assigned event IDs. This document maps the reserved ranges to each domain area.
 
 | ID   | Level   | Message |
 |------|---------|---------|
-| 2020 | Debug   | ICD-11 search cache hit for '{SearchText}' with {ResultCount} results |
+| 2020 | Debug   | ICD-11 search cache miss, calling API for '{SearchText}' |
 | 2021 | Warning | Failed to search ICD-11 API for '{SearchText}' |
-| 2022 | Debug   | ICD-11 code lookup cache hit for '{Code}' |
+| 2022 | Debug   | ICD-11 code lookup cache miss, calling API for '{Code}' |
 | 2023 | Warning | Failed to lookup ICD-11 code '{Code}' |
-| 2024 | Debug   | ICD-11 entity URI lookup cache hit for '{EntityUri}' |
+| 2024 | Debug   | ICD-11 entity URI lookup cache miss, calling API for '{EntityUri}' |
 | 2025 | Warning | Failed to lookup ICD-11 entity URI '{EntityUri}' |
 
 ### FallbackTerminologyProvider (2040 - 2059)

@@ -258,6 +258,7 @@ This solution uses **Central Package Management** via `Directory.Packages.props`
 | Microsoft.AspNetCore.Components.WebAssembly | 10.0.2 |
 | Microsoft.EntityFrameworkCore | 10.0.2 |
 | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.0 |
+| Microsoft.Extensions.Caching.Hybrid | 10.2.0 |
 | Microsoft.Extensions.Http.Resilience | 10.2.0 |
 | Microsoft.Extensions.ServiceDiscovery | 10.2.0 |
 | OpenTelemetry.* | 1.15.0 |
@@ -349,7 +350,7 @@ GitHub Actions workflow (`.github/workflows/pr-validation.yml`):
   - EF Core with PostgreSQL via Npgsql
   - Generic repository pattern with specification evaluator
   - ICD-11 medical terminology integration (API + fallback static dataset)
-  - Memory cache with size limits
+  - HybridCache (`Microsoft.Extensions.Caching.Hybrid`) for ICD-11 API response caching
   - Audit logging via SaveChangesInterceptor
   - Database indexes on key query columns
 - **API Layer (complete):**

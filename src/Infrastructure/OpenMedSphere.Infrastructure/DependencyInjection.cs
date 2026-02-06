@@ -56,9 +56,14 @@ public static class DependencyInjection
         configuration.GetSection(Icd11ApiOptions.SectionName).Bind(icd11Options);
 
         services.Configure<Icd11ApiOptions>(configuration.GetSection(Icd11ApiOptions.SectionName));
-        services.AddMemoryCache(options =>
+
+        services.AddHybridCache(options =>
         {
-            options.SizeLimit = 1024;
+            options.DefaultEntryOptions = new Microsoft.Extensions.Caching.Hybrid.HybridCacheEntryOptions
+            {
+                Expiration = TimeSpan.FromMinutes(icd11Options.CacheDurationMinutes),
+                LocalCacheExpiration = TimeSpan.FromMinutes(icd11Options.CacheDurationMinutes)
+            };
         });
 
         // Always register the fallback provider for baseline ICD-11 lookup

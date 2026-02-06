@@ -1,6 +1,6 @@
 using System.Net.Http.Json;
 using System.Text.RegularExpressions;
-using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OpenMedSphere.Application.Abstractions.MedicalTerminology;
@@ -13,13 +13,18 @@ namespace OpenMedSphere.Infrastructure.MedicalTerminology;
 /// </summary>
 internal sealed partial class Icd11TerminologyProvider(
     HttpClient httpClient,
-    IMemoryCache cache,
+    HybridCache cache,
     IOptions<Icd11ApiOptions> options,
     ILogger<Icd11TerminologyProvider> logger) : IMedicalTerminologyProvider
 {
     private const string ReleaseId = "2025-01";
 
     private readonly Icd11ApiOptions _options = options.Value;
+
+    /// <summary>
+    /// Wrapper for caching nullable results in HybridCache.
+    /// </summary>
+    private sealed record CachedCode(MedicalCode? Value);
 
     /// <inheritdoc />
     public string CodingSystem => "ICD-11";
@@ -31,51 +36,48 @@ internal sealed partial class Icd11TerminologyProvider(
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(searchText);
 
-        string cacheKey = $"icd11:search:{searchText.ToLowerInvariant()}";
-
-        if (cache.TryGetValue(cacheKey, out IReadOnlyList<MedicalCode>? cached) && cached is not null)
+        var cacheKey = $"icd11:search:{searchText.ToLowerInvariant()}";
+        var entryOptions = new HybridCacheEntryOptions
         {
-            LogSearchCacheHit(searchText, cached.Count);
-            return cached;
-        }
+            Expiration = TimeSpan.FromMinutes(_options.CacheDurationMinutes),
+            LocalCacheExpiration = TimeSpan.FromMinutes(_options.CacheDurationMinutes)
+        };
 
         try
         {
-            string url = $"/icd/release/11/{ReleaseId}/mms/search?q={Uri.EscapeDataString(searchText)}" +
-                         $"&subtreeFilterUsesFoundationDescendants=false&includeKeywordResult=false" +
-                         $"&useFlexisearch=false&flatResults=true" +
-                         $"&highlightingEnabled=false&medicalCodingMode=true";
-
-            httpClient.DefaultRequestHeaders.Remove("Accept-Language");
-            httpClient.DefaultRequestHeaders.Add("Accept-Language", _options.Language);
-            httpClient.DefaultRequestHeaders.Remove("API-Version");
-            httpClient.DefaultRequestHeaders.Add("API-Version", "v2");
-
-            Icd11SearchResponse? response = await httpClient
-                .GetFromJsonAsync<Icd11SearchResponse>(url, cancellationToken);
-
-            if (response?.DestinationEntities is null)
+            var results = await cache.GetOrCreateAsync(cacheKey, async ct =>
             {
-                return [];
-            }
+                LogSearchApiCall(searchText);
 
-            List<MedicalCode> results = response.DestinationEntities
-                .Where(e => !string.IsNullOrWhiteSpace(e.TheCode) && !string.IsNullOrWhiteSpace(e.Title))
-                .Select(e => MedicalCode.Create(
-                    code: e.TheCode!,
-                    displayName: StripHtmlTags(e.Title!),
-                    codingSystem: CodingSystem,
-                    entityUri: e.Id))
-                .ToList();
+                var url = $"/icd/release/11/{ReleaseId}/mms/search?q={Uri.EscapeDataString(searchText)}" +
+                          $"&subtreeFilterUsesFoundationDescendants=false&includeKeywordResult=false" +
+                          $"&useFlexisearch=false&flatResults=true" +
+                          $"&highlightingEnabled=false&medicalCodingMode=true";
 
-            MemoryCacheEntryOptions cacheEntryOptions = new()
-            {
-                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(_options.CacheDurationMinutes),
-                Size = 1
-            };
-            cache.Set(cacheKey, (IReadOnlyList<MedicalCode>)results.AsReadOnly(), cacheEntryOptions);
+                httpClient.DefaultRequestHeaders.Remove("Accept-Language");
+                httpClient.DefaultRequestHeaders.Add("Accept-Language", _options.Language);
+                httpClient.DefaultRequestHeaders.Remove("API-Version");
+                httpClient.DefaultRequestHeaders.Add("API-Version", "v2");
 
-            return results.AsReadOnly();
+                var response = await httpClient
+                    .GetFromJsonAsync<Icd11SearchResponse>(url, ct);
+
+                if (response?.DestinationEntities is null)
+                {
+                    return Array.Empty<MedicalCode>();
+                }
+
+                return response.DestinationEntities
+                    .Where(e => !string.IsNullOrWhiteSpace(e.TheCode) && !string.IsNullOrWhiteSpace(e.Title))
+                    .Select(e => MedicalCode.Create(
+                        code: e.TheCode!,
+                        displayName: StripHtmlTags(e.Title!),
+                        codingSystem: CodingSystem,
+                        entityUri: e.Id))
+                    .ToArray();
+            }, entryOptions, cancellationToken: cancellationToken);
+
+            return results;
         }
         catch (Exception ex)
         {
@@ -91,46 +93,45 @@ internal sealed partial class Icd11TerminologyProvider(
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(code);
 
-        string cacheKey = $"icd11:code:{code}";
-
-        if (cache.TryGetValue(cacheKey, out MedicalCode? cached))
+        var cacheKey = $"icd11:code:{code}";
+        var entryOptions = new HybridCacheEntryOptions
         {
-            LogCodeLookupCacheHit(code);
-            return cached;
-        }
+            Expiration = TimeSpan.FromMinutes(_options.CacheDurationMinutes),
+            LocalCacheExpiration = TimeSpan.FromMinutes(_options.CacheDurationMinutes)
+        };
 
         try
         {
-            string url = $"/icd/release/11/{ReleaseId}/mms/codeinfo/{Uri.EscapeDataString(code)}" +
-                         $"?flexiblemode=false";
-
-            httpClient.DefaultRequestHeaders.Remove("Accept-Language");
-            httpClient.DefaultRequestHeaders.Add("Accept-Language", _options.Language);
-            httpClient.DefaultRequestHeaders.Remove("API-Version");
-            httpClient.DefaultRequestHeaders.Add("API-Version", "v2");
-
-            Icd11EntityResponse? response = await httpClient
-                .GetFromJsonAsync<Icd11EntityResponse>(url, cancellationToken);
-
-            if (response is null || string.IsNullOrWhiteSpace(response.Title?.Value))
+            var cached = await cache.GetOrCreateAsync(cacheKey, async ct =>
             {
-                return null;
-            }
+                LogCodeLookupApiCall(code);
 
-            MedicalCode result = MedicalCode.Create(
-                code: response.Code ?? code,
-                displayName: StripHtmlTags(response.Title.Value),
-                codingSystem: CodingSystem,
-                entityUri: response.Id);
+                var url = $"/icd/release/11/{ReleaseId}/mms/codeinfo/{Uri.EscapeDataString(code)}" +
+                          $"?flexiblemode=false";
 
-            MemoryCacheEntryOptions codeCacheOptions = new()
-            {
-                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(_options.CacheDurationMinutes),
-                Size = 1
-            };
-            cache.Set(cacheKey, result, codeCacheOptions);
+                httpClient.DefaultRequestHeaders.Remove("Accept-Language");
+                httpClient.DefaultRequestHeaders.Add("Accept-Language", _options.Language);
+                httpClient.DefaultRequestHeaders.Remove("API-Version");
+                httpClient.DefaultRequestHeaders.Add("API-Version", "v2");
 
-            return result;
+                var response = await httpClient
+                    .GetFromJsonAsync<Icd11EntityResponse>(url, ct);
+
+                if (response is null || string.IsNullOrWhiteSpace(response.Title?.Value))
+                {
+                    return new CachedCode(null);
+                }
+
+                var result = MedicalCode.Create(
+                    code: response.Code ?? code,
+                    displayName: StripHtmlTags(response.Title.Value),
+                    codingSystem: CodingSystem,
+                    entityUri: response.Id);
+
+                return new CachedCode(result);
+            }, entryOptions, cancellationToken: cancellationToken);
+
+            return cached.Value;
         }
         catch (Exception ex)
         {
@@ -146,43 +147,42 @@ internal sealed partial class Icd11TerminologyProvider(
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(entityUri);
 
-        string cacheKey = $"icd11:entity:{entityUri}";
-
-        if (cache.TryGetValue(cacheKey, out MedicalCode? cached))
+        var cacheKey = $"icd11:entity:{entityUri}";
+        var entryOptions = new HybridCacheEntryOptions
         {
-            LogEntityUriLookupCacheHit(entityUri);
-            return cached;
-        }
+            Expiration = TimeSpan.FromMinutes(_options.CacheDurationMinutes),
+            LocalCacheExpiration = TimeSpan.FromMinutes(_options.CacheDurationMinutes)
+        };
 
         try
         {
-            httpClient.DefaultRequestHeaders.Remove("Accept-Language");
-            httpClient.DefaultRequestHeaders.Add("Accept-Language", _options.Language);
-            httpClient.DefaultRequestHeaders.Remove("API-Version");
-            httpClient.DefaultRequestHeaders.Add("API-Version", "v2");
-
-            Icd11EntityResponse? response = await httpClient
-                .GetFromJsonAsync<Icd11EntityResponse>(entityUri, cancellationToken);
-
-            if (response is null || string.IsNullOrWhiteSpace(response.Title?.Value))
+            var cached = await cache.GetOrCreateAsync(cacheKey, async ct =>
             {
-                return null;
-            }
+                LogEntityUriLookupApiCall(entityUri);
 
-            MedicalCode result = MedicalCode.Create(
-                code: response.Code ?? entityUri,
-                displayName: StripHtmlTags(response.Title.Value),
-                codingSystem: CodingSystem,
-                entityUri: response.Id ?? entityUri);
+                httpClient.DefaultRequestHeaders.Remove("Accept-Language");
+                httpClient.DefaultRequestHeaders.Add("Accept-Language", _options.Language);
+                httpClient.DefaultRequestHeaders.Remove("API-Version");
+                httpClient.DefaultRequestHeaders.Add("API-Version", "v2");
 
-            MemoryCacheEntryOptions entityCacheOptions = new()
-            {
-                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(_options.CacheDurationMinutes),
-                Size = 1
-            };
-            cache.Set(cacheKey, result, entityCacheOptions);
+                var response = await httpClient
+                    .GetFromJsonAsync<Icd11EntityResponse>(entityUri, ct);
 
-            return result;
+                if (response is null || string.IsNullOrWhiteSpace(response.Title?.Value))
+                {
+                    return new CachedCode(null);
+                }
+
+                var result = MedicalCode.Create(
+                    code: response.Code ?? entityUri,
+                    displayName: StripHtmlTags(response.Title.Value),
+                    codingSystem: CodingSystem,
+                    entityUri: response.Id ?? entityUri);
+
+                return new CachedCode(result);
+            }, entryOptions, cancellationToken: cancellationToken);
+
+            return cached.Value;
         }
         catch (Exception ex)
         {
@@ -197,20 +197,20 @@ internal sealed partial class Icd11TerminologyProvider(
     [GeneratedRegex("<[^>]+>")]
     private static partial Regex HtmlTagRegex();
 
-    [LoggerMessage(EventId = 2020, Level = LogLevel.Debug, Message = "ICD-11 search cache hit for '{SearchText}' with {ResultCount} results")]
-    private partial void LogSearchCacheHit(string searchText, int resultCount);
+    [LoggerMessage(EventId = 2020, Level = LogLevel.Debug, Message = "ICD-11 search cache miss, calling API for '{SearchText}'")]
+    private partial void LogSearchApiCall(string searchText);
 
     [LoggerMessage(EventId = 2021, Level = LogLevel.Warning, Message = "Failed to search ICD-11 API for '{SearchText}'")]
     private partial void LogSearchFailed(string searchText, Exception ex);
 
-    [LoggerMessage(EventId = 2022, Level = LogLevel.Debug, Message = "ICD-11 code lookup cache hit for '{Code}'")]
-    private partial void LogCodeLookupCacheHit(string code);
+    [LoggerMessage(EventId = 2022, Level = LogLevel.Debug, Message = "ICD-11 code lookup cache miss, calling API for '{Code}'")]
+    private partial void LogCodeLookupApiCall(string code);
 
     [LoggerMessage(EventId = 2023, Level = LogLevel.Warning, Message = "Failed to lookup ICD-11 code '{Code}'")]
     private partial void LogCodeLookupFailed(string code, Exception ex);
 
-    [LoggerMessage(EventId = 2024, Level = LogLevel.Debug, Message = "ICD-11 entity URI lookup cache hit for '{EntityUri}'")]
-    private partial void LogEntityUriLookupCacheHit(string entityUri);
+    [LoggerMessage(EventId = 2024, Level = LogLevel.Debug, Message = "ICD-11 entity URI lookup cache miss, calling API for '{EntityUri}'")]
+    private partial void LogEntityUriLookupApiCall(string entityUri);
 
     [LoggerMessage(EventId = 2025, Level = LogLevel.Warning, Message = "Failed to lookup ICD-11 entity URI '{EntityUri}'")]
     private partial void LogEntityUriLookupFailed(string entityUri, Exception ex);
