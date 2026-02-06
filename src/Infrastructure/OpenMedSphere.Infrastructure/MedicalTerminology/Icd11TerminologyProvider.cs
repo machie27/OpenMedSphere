@@ -68,8 +68,12 @@ internal sealed partial class Icd11TerminologyProvider(
                     entityUri: e.Id))
                 .ToList();
 
-            cache.Set(cacheKey, (IReadOnlyList<MedicalCode>)results.AsReadOnly(),
-                TimeSpan.FromMinutes(_options.CacheDurationMinutes));
+            MemoryCacheEntryOptions cacheEntryOptions = new()
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(_options.CacheDurationMinutes),
+                Size = 1
+            };
+            cache.Set(cacheKey, (IReadOnlyList<MedicalCode>)results.AsReadOnly(), cacheEntryOptions);
 
             return results.AsReadOnly();
         }
@@ -119,7 +123,12 @@ internal sealed partial class Icd11TerminologyProvider(
                 codingSystem: CodingSystem,
                 entityUri: response.Id);
 
-            cache.Set(cacheKey, result, TimeSpan.FromMinutes(_options.CacheDurationMinutes));
+            MemoryCacheEntryOptions codeCacheOptions = new()
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(_options.CacheDurationMinutes),
+                Size = 1
+            };
+            cache.Set(cacheKey, result, codeCacheOptions);
 
             return result;
         }
@@ -166,7 +175,12 @@ internal sealed partial class Icd11TerminologyProvider(
                 codingSystem: CodingSystem,
                 entityUri: response.Id ?? entityUri);
 
-            cache.Set(cacheKey, result, TimeSpan.FromMinutes(_options.CacheDurationMinutes));
+            MemoryCacheEntryOptions entityCacheOptions = new()
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(_options.CacheDurationMinutes),
+                Size = 1
+            };
+            cache.Set(cacheKey, result, entityCacheOptions);
 
             return result;
         }

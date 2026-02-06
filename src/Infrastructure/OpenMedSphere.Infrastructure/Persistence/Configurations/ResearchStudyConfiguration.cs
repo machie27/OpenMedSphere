@@ -44,13 +44,16 @@ internal sealed class ResearchStudyConfiguration : IEntityTypeConfiguration<Rese
         builder.Property(r => r.CreatedAtUtc);
         builder.Property(r => r.UpdatedAtUtc);
 
-        builder.Property(r => r.PatientDataIds)
+        builder.Property<List<Guid>>("_patientDataIds")
+            .HasColumnName("PatientDataIds")
             .HasColumnType("jsonb");
 
         builder.HasIndex(r => r.ResearchArea);
         builder.HasIndex(r => r.IsActive);
+        builder.HasIndex("StudyCode").IsUnique().HasDatabaseName("IX_ResearchStudies_StudyCode");
 
         builder.Ignore(r => r.DomainEvents);
         builder.Ignore(r => r.CurrentParticipantCount);
+        builder.Ignore(r => r.PatientDataIds);
     }
 }

@@ -20,27 +20,32 @@ public static class PatientDataEndpoints
     public static IEndpointRouteBuilder MapPatientDataEndpoints(this IEndpointRouteBuilder app)
     {
         RouteGroupBuilder group = app.MapGroup("/api/patient-data")
-            .WithTags("Patient Data");
+            .WithTags("Patient Data")
+            .RequireAuthorization();
 
         group.MapGet("/{id:guid}", GetByIdAsync)
             .WithName("GetPatientDataById")
             .Produces<PatientDataResponse>()
-            .Produces(StatusCodes.Status404NotFound);
+            .Produces(StatusCodes.Status404NotFound)
+            .RequireRateLimiting("fixed");
 
         group.MapGet("/search", SearchAsync)
             .WithName("SearchPatientData")
-            .Produces<PagedResult<PatientDataResponse>>();
+            .Produces<PagedResult<PatientDataResponse>>()
+            .RequireRateLimiting("fixed");
 
         group.MapPost("/", CreateAsync)
             .WithName("CreatePatientData")
             .Produces<Guid>(StatusCodes.Status201Created)
-            .Produces(StatusCodes.Status400BadRequest);
+            .Produces(StatusCodes.Status400BadRequest)
+            .RequireRateLimiting("write");
 
         group.MapPost("/{id:guid}/anonymize", AnonymizeAsync)
             .WithName("AnonymizePatientData")
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status404NotFound);
+            .Produces(StatusCodes.Status404NotFound)
+            .RequireRateLimiting("write");
 
         return app;
     }

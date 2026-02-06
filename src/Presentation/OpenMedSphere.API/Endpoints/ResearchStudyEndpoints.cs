@@ -18,16 +18,19 @@ public static class ResearchStudyEndpoints
     public static IEndpointRouteBuilder MapResearchStudyEndpoints(this IEndpointRouteBuilder app)
     {
         RouteGroupBuilder group = app.MapGroup("/api/research-studies")
-            .WithTags("Research Studies");
+            .WithTags("Research Studies")
+            .RequireAuthorization();
 
         group.MapGet("/search", SearchAsync)
             .WithName("SearchResearchStudies")
-            .Produces<PagedResult<ResearchStudyResponse>>();
+            .Produces<PagedResult<ResearchStudyResponse>>()
+            .RequireRateLimiting("fixed");
 
         group.MapPost("/", CreateAsync)
             .WithName("CreateResearchStudy")
             .Produces<Guid>(StatusCodes.Status201Created)
-            .Produces(StatusCodes.Status400BadRequest);
+            .Produces(StatusCodes.Status400BadRequest)
+            .RequireRateLimiting("write");
 
         return app;
     }

@@ -13,11 +13,15 @@ internal sealed class PatientDataRepository(ApplicationDbContext dbContext)
     /// <inheritdoc />
     public async Task<IReadOnlyList<PatientData>> GetByDiagnosisAsync(
         string diagnosis,
-        CancellationToken cancellationToken = default) =>
-        await DbSet
+        CancellationToken cancellationToken = default)
+    {
+        string escapedDiagnosis = EscapeLikePattern(diagnosis);
+
+        return await DbSet
             .Where(p => p.PrimaryDiagnosis != null &&
-                        EF.Functions.ILike(p.PrimaryDiagnosis, $"%{diagnosis}%"))
+                        EF.Functions.ILike(p.PrimaryDiagnosis, $"%{escapedDiagnosis}%"))
             .ToListAsync(cancellationToken);
+    }
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<PatientData>> GetAnonymizedAsync(
@@ -25,4 +29,10 @@ internal sealed class PatientDataRepository(ApplicationDbContext dbContext)
         await DbSet
             .Where(p => p.IsAnonymized)
             .ToListAsync(cancellationToken);
+
+    private static string EscapeLikePattern(string input) =>
+        input
+            .Replace("\\", "\\\\")
+            .Replace("%", "\\%")
+            .Replace("_", "\\_");
 }

@@ -5,6 +5,7 @@ using OpenMedSphere.Application.Abstractions.Data;
 using OpenMedSphere.Application.Abstractions.MedicalTerminology;
 using OpenMedSphere.Infrastructure.MedicalTerminology;
 using OpenMedSphere.Infrastructure.Persistence;
+using OpenMedSphere.Infrastructure.Persistence.Interceptors;
 using OpenMedSphere.Infrastructure.Persistence.Repositories;
 
 namespace OpenMedSphere.Infrastructure;
@@ -34,9 +35,12 @@ public static class DependencyInjection
     {
         string? connectionString = configuration.GetConnectionString("openmedsphere-db");
 
-        services.AddDbContext<ApplicationDbContext>(options =>
+        services.AddSingleton<AuditSaveChangesInterceptor>();
+
+        services.AddDbContext<ApplicationDbContext>((sp, options) =>
         {
             options.UseNpgsql(connectionString);
+            options.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>());
         });
 
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<ApplicationDbContext>());
@@ -52,7 +56,10 @@ public static class DependencyInjection
         configuration.GetSection(Icd11ApiOptions.SectionName).Bind(icd11Options);
 
         services.Configure<Icd11ApiOptions>(configuration.GetSection(Icd11ApiOptions.SectionName));
-        services.AddMemoryCache();
+        services.AddMemoryCache(options =>
+        {
+            options.SizeLimit = 1024;
+        });
 
         // Always register the fallback provider for baseline ICD-11 lookup
         services.AddSingleton<IMedicalTerminologyProvider, FallbackTerminologyProvider>();

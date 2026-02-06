@@ -17,16 +17,19 @@ public static class AnonymizationPolicyEndpoints
     public static IEndpointRouteBuilder MapAnonymizationPolicyEndpoints(this IEndpointRouteBuilder app)
     {
         RouteGroupBuilder group = app.MapGroup("/api/anonymization-policies")
-            .WithTags("Anonymization Policies");
+            .WithTags("Anonymization Policies")
+            .RequireAuthorization();
 
         group.MapGet("/", GetAllAsync)
             .WithName("GetAllAnonymizationPolicies")
-            .Produces<IReadOnlyList<AnonymizationPolicyResponse>>();
+            .Produces<IReadOnlyList<AnonymizationPolicyResponse>>()
+            .RequireRateLimiting("fixed");
 
         group.MapPost("/", CreateAsync)
             .WithName("CreateAnonymizationPolicy")
             .Produces<Guid>(StatusCodes.Status201Created)
-            .Produces(StatusCodes.Status400BadRequest);
+            .Produces(StatusCodes.Status400BadRequest)
+            .RequireRateLimiting("write");
 
         return app;
     }

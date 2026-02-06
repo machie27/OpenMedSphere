@@ -32,8 +32,8 @@ internal sealed class GetPatientDataByIdQueryHandler(IPatientDataRepository repo
             Region = patientData.Region,
             PrimaryDiagnosis = patientData.PrimaryDiagnosis,
             PrimaryDiagnosisIcdCode = patientData.PrimaryDiagnosisCode?.Code,
-            SecondaryDiagnoses = patientData.SecondaryDiagnoses.AsReadOnly(),
-            Medications = patientData.Medications.AsReadOnly(),
+            SecondaryDiagnoses = patientData.SecondaryDiagnoses.ToList(),
+            Medications = patientData.Medications.ToList(),
             IsAnonymized = patientData.IsAnonymized,
             CollectedAtUtc = patientData.CollectedAtUtc,
             CreatedAtUtc = patientData.CreatedAtUtc

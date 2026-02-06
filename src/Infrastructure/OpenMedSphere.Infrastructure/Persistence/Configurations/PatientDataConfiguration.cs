@@ -30,10 +30,12 @@ internal sealed class PatientDataConfiguration : IEntityTypeConfiguration<Patien
         builder.Property(p => p.PrimaryDiagnosis).HasMaxLength(500);
         builder.Property(p => p.ClinicalNotes).HasMaxLength(10000);
 
-        builder.Property(p => p.SecondaryDiagnoses)
+        builder.Property<List<string>>("_secondaryDiagnoses")
+            .HasColumnName("SecondaryDiagnoses")
             .HasColumnType("jsonb");
 
-        builder.Property(p => p.Medications)
+        builder.Property<List<string>>("_medications")
+            .HasColumnName("Medications")
             .HasColumnType("jsonb");
 
         builder.OwnsOne(p => p.PrimaryDiagnosisCode, code =>
@@ -52,7 +54,8 @@ internal sealed class PatientDataConfiguration : IEntityTypeConfiguration<Patien
                 .HasMaxLength(500);
         });
 
-        builder.Property(p => p.SecondaryDiagnosisCodes)
+        builder.Property<List<MedicalCode>>("_secondaryDiagnosisCodes")
+            .HasColumnName("SecondaryDiagnosisCodes")
             .HasColumnType("jsonb");
 
         builder.Property(p => p.IsAnonymized);
@@ -64,7 +67,13 @@ internal sealed class PatientDataConfiguration : IEntityTypeConfiguration<Patien
 
         builder.HasIndex(p => p.PrimaryDiagnosis);
         builder.HasIndex(p => p.IsAnonymized);
+        builder.HasIndex(p => p.CollectedAtUtc);
+        builder.HasIndex(p => p.AnonymizationPolicyId);
+        builder.HasIndex("PatientIdentifier").HasDatabaseName("IX_PatientData_PatientIdentifier");
 
         builder.Ignore(p => p.DomainEvents);
+        builder.Ignore(p => p.SecondaryDiagnoses);
+        builder.Ignore(p => p.SecondaryDiagnosisCodes);
+        builder.Ignore(p => p.Medications);
     }
 }

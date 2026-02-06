@@ -25,6 +25,11 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     /// </summary>
     public DbSet<AnonymizationPolicy> AnonymizationPolicies => Set<AnonymizationPolicy>();
 
+    /// <summary>
+    /// Gets the audit log entries set.
+    /// </summary>
+    public DbSet<AuditLogEntry> AuditLog => Set<AuditLogEntry>();
+
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

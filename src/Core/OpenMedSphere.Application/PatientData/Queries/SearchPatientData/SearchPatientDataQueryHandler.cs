@@ -41,8 +41,8 @@ internal sealed class SearchPatientDataQueryHandler(IPatientDataRepository repos
                 Region = p.Region,
                 PrimaryDiagnosis = p.PrimaryDiagnosis,
                 PrimaryDiagnosisIcdCode = p.PrimaryDiagnosisCode?.Code,
-                SecondaryDiagnoses = p.SecondaryDiagnoses.AsReadOnly(),
-                Medications = p.Medications.AsReadOnly(),
+                SecondaryDiagnoses = p.SecondaryDiagnoses.ToList(),
+                Medications = p.Medications.ToList(),
                 IsAnonymized = p.IsAnonymized,
                 CollectedAtUtc = p.CollectedAtUtc,
                 CreatedAtUtc = p.CreatedAtUtc

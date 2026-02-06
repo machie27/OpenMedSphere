@@ -1,4 +1,6 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -11,6 +13,11 @@ internal sealed partial class Mediator(
     IServiceProvider serviceProvider,
     ILogger<Mediator> logger) : IMediator
 {
+    private static readonly ConcurrentDictionary<Type, (Type HandlerType, MethodInfo HandleMethod)> CommandHandlerCache = new();
+    private static readonly ConcurrentDictionary<Type, (Type HandlerType, MethodInfo HandleMethod)> CommandWithResponseHandlerCache = new();
+    private static readonly ConcurrentDictionary<Type, (Type HandlerType, MethodInfo HandleMethod)> QueryHandlerCache = new();
+    private static readonly ConcurrentDictionary<Type, Type?> ValidatorTypeCache = new();
+
     /// <inheritdoc />
     public async Task<Result> SendAsync(ICommand command, CancellationToken cancellationToken = default)
     {
@@ -20,12 +27,21 @@ internal sealed partial class Mediator(
         string commandName = commandType.Name;
         LogCommandDispatching(commandName);
 
-        Type handlerType = typeof(ICommandHandler<>).MakeGenericType(commandType);
+        Result? validationFailure = await ValidateAsync(commandType, command);
+        if (validationFailure is not null)
+        {
+            return validationFailure;
+        }
+
+        (Type handlerType, MethodInfo handleMethod) = CommandHandlerCache.GetOrAdd(commandType, static type =>
+        {
+            Type ht = typeof(ICommandHandler<>).MakeGenericType(type);
+            MethodInfo hm = ht.GetMethod(nameof(ICommandHandler<ICommand>.HandleAsync))
+                ?? throw new InvalidOperationException($"Handler for {type.Name} does not have a HandleAsync method.");
+            return (ht, hm);
+        });
 
         object handler = serviceProvider.GetRequiredService(handlerType);
-
-        System.Reflection.MethodInfo handleMethod = handlerType.GetMethod(nameof(ICommandHandler<ICommand>.HandleAsync))
-            ?? throw new InvalidOperationException($"Handler for {commandName} does not have a HandleAsync method.");
 
         long startTimestamp = Stopwatch.GetTimestamp();
 
@@ -67,12 +83,21 @@ internal sealed partial class Mediator(
         string commandName = commandType.Name;
         LogCommandWithResponseDispatching(commandName, typeof(TResponse).Name);
 
-        Type handlerType = typeof(ICommandHandler<,>).MakeGenericType(commandType, typeof(TResponse));
+        Result? validationFailure = await ValidateAsync(commandType, command);
+        if (validationFailure is not null)
+        {
+            return Result<TResponse>.Failure(validationFailure.Error!);
+        }
+
+        (Type handlerType, MethodInfo handleMethod) = CommandWithResponseHandlerCache.GetOrAdd(commandType, type =>
+        {
+            Type ht = typeof(ICommandHandler<,>).MakeGenericType(type, typeof(TResponse));
+            MethodInfo hm = ht.GetMethod(nameof(ICommandHandler<ICommand<object>, object>.HandleAsync))
+                ?? throw new InvalidOperationException($"Handler for {type.Name} does not have a HandleAsync method.");
+            return (ht, hm);
+        });
 
         object handler = serviceProvider.GetRequiredService(handlerType);
-
-        System.Reflection.MethodInfo handleMethod = handlerType.GetMethod(nameof(ICommandHandler<ICommand<object>, object>.HandleAsync))
-            ?? throw new InvalidOperationException($"Handler for {commandName} does not have a HandleAsync method.");
 
         long startTimestamp = Stopwatch.GetTimestamp();
 
@@ -114,12 +139,21 @@ internal sealed partial class Mediator(
         string queryName = queryType.Name;
         LogQueryDispatching(queryName, typeof(TResponse).Name);
 
-        Type handlerType = typeof(IQueryHandler<,>).MakeGenericType(queryType, typeof(TResponse));
+        Result? validationFailure = await ValidateAsync(queryType, query);
+        if (validationFailure is not null)
+        {
+            return Result<TResponse>.Failure(validationFailure.Error!);
+        }
+
+        (Type handlerType, MethodInfo handleMethod) = QueryHandlerCache.GetOrAdd(queryType, type =>
+        {
+            Type ht = typeof(IQueryHandler<,>).MakeGenericType(type, typeof(TResponse));
+            MethodInfo hm = ht.GetMethod(nameof(IQueryHandler<IQuery<object>, object>.HandleAsync))
+                ?? throw new InvalidOperationException($"Handler for {type.Name} does not have a HandleAsync method.");
+            return (ht, hm);
+        });
 
         object handler = serviceProvider.GetRequiredService(handlerType);
-
-        System.Reflection.MethodInfo handleMethod = handlerType.GetMethod(nameof(IQueryHandler<IQuery<object>, object>.HandleAsync))
-            ?? throw new InvalidOperationException($"Handler for {queryName} does not have a HandleAsync method.");
 
         long startTimestamp = Stopwatch.GetTimestamp();
 
@@ -150,6 +184,35 @@ internal sealed partial class Mediator(
             LogQueryException(queryName, typeof(TResponse).Name, elapsed.TotalMilliseconds, ex);
             throw;
         }
+    }
+
+    private async Task<Result?> ValidateAsync<T>(Type messageType, T message)
+    {
+        Type? validatorType = ValidatorTypeCache.GetOrAdd(messageType,
+            static type => typeof(IValidator<>).MakeGenericType(type));
+
+        if (validatorType is null)
+        {
+            return null;
+        }
+
+        object? validator = serviceProvider.GetService(validatorType);
+        if (validator is null)
+        {
+            return null;
+        }
+
+        MethodInfo validateMethod = validatorType.GetMethod(nameof(IValidator<object>.Validate))!;
+        object validationResultObj = validateMethod.Invoke(validator, [message])!;
+        ValidationResult validationResult = (ValidationResult)validationResultObj;
+
+        if (validationResult.IsValid)
+        {
+            return null;
+        }
+
+        string errorMessage = string.Join("; ", validationResult.Errors.Select(e => $"{e.PropertyName}: {e.ErrorMessage}"));
+        return Result.Failure(errorMessage);
     }
 
     [LoggerMessage(EventId = 1000, Level = LogLevel.Debug, Message = "Dispatching command {CommandName}")]

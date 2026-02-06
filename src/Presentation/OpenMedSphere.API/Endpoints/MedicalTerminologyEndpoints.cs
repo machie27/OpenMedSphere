@@ -17,7 +17,9 @@ public static class MedicalTerminologyEndpoints
     public static IEndpointRouteBuilder MapMedicalTerminologyEndpoints(this IEndpointRouteBuilder app)
     {
         RouteGroupBuilder group = app.MapGroup("/api/medical-codes")
-            .WithTags("Medical Terminology");
+            .WithTags("Medical Terminology")
+            .RequireAuthorization()
+            .RequireRateLimiting("fixed");
 
         group.MapGet("/coding-systems", GetCodingSystemsAsync)
             .WithName("GetCodingSystems")

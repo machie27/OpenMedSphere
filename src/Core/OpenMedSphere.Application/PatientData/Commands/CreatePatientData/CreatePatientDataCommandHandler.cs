@@ -38,10 +38,13 @@ internal sealed class CreatePatientDataCommandHandler(
             MedicalCode? code = await terminologyService.GetByCodeAsync(
                 command.PrimaryDiagnosisIcdCode, cancellationToken: cancellationToken);
 
-            if (code is not null)
+            if (code is null)
             {
-                patientData.SetPrimaryDiagnosisCode(code);
+                return Result<Guid>.Failure(
+                    $"ICD code '{command.PrimaryDiagnosisIcdCode}' was not found in any configured coding system.");
             }
+
+            patientData.SetPrimaryDiagnosisCode(code);
         }
 
         if (command.SecondaryDiagnoses is not null)

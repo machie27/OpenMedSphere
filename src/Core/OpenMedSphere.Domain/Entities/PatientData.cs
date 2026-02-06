@@ -1,3 +1,4 @@
+using OpenMedSphere.Domain.Events;
 using OpenMedSphere.Domain.Primitives;
 using OpenMedSphere.Domain.ValueObjects;
 
@@ -10,6 +11,10 @@ namespace OpenMedSphere.Domain.Entities;
 public sealed class PatientData : AggregateRoot<Guid>
 {
     private const int MinYearOfBirth = 1900;
+
+    private readonly List<string> _secondaryDiagnoses = [];
+    private readonly List<MedicalCode> _secondaryDiagnosisCodes = [];
+    private readonly List<string> _medications = [];
 
     /// <summary>
     /// Gets the anonymized patient identifier.
@@ -44,17 +49,17 @@ public sealed class PatientData : AggregateRoot<Guid>
     /// <summary>
     /// Gets the list of secondary diagnoses.
     /// </summary>
-    public List<string> SecondaryDiagnoses { get; init; } = [];
+    public IReadOnlyCollection<string> SecondaryDiagnoses => _secondaryDiagnoses.AsReadOnly();
 
     /// <summary>
     /// Gets the list of structured medical codes for secondary diagnoses.
     /// </summary>
-    public List<MedicalCode> SecondaryDiagnosisCodes { get; init; } = [];
+    public IReadOnlyCollection<MedicalCode> SecondaryDiagnosisCodes => _secondaryDiagnosisCodes.AsReadOnly();
 
     /// <summary>
     /// Gets the list of medications.
     /// </summary>
-    public List<string> Medications { get; init; } = [];
+    public IReadOnlyCollection<string> Medications => _medications.AsReadOnly();
 
     /// <summary>
     /// Gets the clinical notes (anonymized).
@@ -118,10 +123,14 @@ public sealed class PatientData : AggregateRoot<Guid>
     {
         ArgumentNullException.ThrowIfNull(patientId);
 
-        return new PatientData(Guid.CreateVersion7())
+        PatientData patientData = new(Guid.CreateVersion7())
         {
             PatientId = patientId
         };
+
+        patientData.RaiseDomainEvent(new PatientDataCreatedEvent(patientData.Id));
+
+        return patientData;
     }
 
     /// <summary>
@@ -180,13 +189,13 @@ public sealed class PatientData : AggregateRoot<Guid>
     {
         ArgumentNullException.ThrowIfNull(code);
 
-        if (!SecondaryDiagnosisCodes.Any(c => c.Code == code.Code && c.CodingSystem == code.CodingSystem))
+        if (!_secondaryDiagnosisCodes.Any(c => c.Code == code.Code && c.CodingSystem == code.CodingSystem))
         {
-            SecondaryDiagnosisCodes.Add(code);
+            _secondaryDiagnosisCodes.Add(code);
 
-            if (!SecondaryDiagnoses.Contains(code.DisplayName))
+            if (!_secondaryDiagnoses.Contains(code.DisplayName))
             {
-                SecondaryDiagnoses.Add(code.DisplayName);
+                _secondaryDiagnoses.Add(code.DisplayName);
             }
 
             UpdatedAtUtc = DateTime.UtcNow;
@@ -201,9 +210,9 @@ public sealed class PatientData : AggregateRoot<Guid>
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(diagnosis);
 
-        if (!SecondaryDiagnoses.Contains(diagnosis))
+        if (!_secondaryDiagnoses.Contains(diagnosis))
         {
-            SecondaryDiagnoses.Add(diagnosis);
+            _secondaryDiagnoses.Add(diagnosis);
             UpdatedAtUtc = DateTime.UtcNow;
         }
     }
@@ -214,7 +223,7 @@ public sealed class PatientData : AggregateRoot<Guid>
     /// <param name="diagnosis">The secondary diagnosis to remove.</param>
     public void RemoveSecondaryDiagnosis(string diagnosis)
     {
-        if (SecondaryDiagnoses.Remove(diagnosis))
+        if (_secondaryDiagnoses.Remove(diagnosis))
         {
             UpdatedAtUtc = DateTime.UtcNow;
         }
@@ -228,9 +237,9 @@ public sealed class PatientData : AggregateRoot<Guid>
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(medication);
 
-        if (!Medications.Contains(medication))
+        if (!_medications.Contains(medication))
         {
-            Medications.Add(medication);
+            _medications.Add(medication);
             UpdatedAtUtc = DateTime.UtcNow;
         }
     }
@@ -241,7 +250,7 @@ public sealed class PatientData : AggregateRoot<Guid>
     /// <param name="medication">The medication to remove.</param>
     public void RemoveMedication(string medication)
     {
-        if (Medications.Remove(medication))
+        if (_medications.Remove(medication))
         {
             UpdatedAtUtc = DateTime.UtcNow;
         }
@@ -267,6 +276,8 @@ public sealed class PatientData : AggregateRoot<Guid>
         AnonymizedAtUtc = DateTime.UtcNow;
         IsAnonymized = true;
         UpdatedAtUtc = DateTime.UtcNow;
+
+        RaiseDomainEvent(new PatientDataAnonymizedEvent(Id, policyId));
     }
 
     /// <summary>

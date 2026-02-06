@@ -30,6 +30,9 @@ src/
     ├── OpenMedSphere.Web/             # Blazor WebAssembly frontend with PWA support
     ├── OpenMedSphere.AppHost/         # .NET Aspire orchestration host
     └── OpenMedSphere.ServiceDefaults/ # Shared service configuration (telemetry, health checks)
+tests/
+├── OpenMedSphere.Domain.Tests/        # Domain entity and value object unit tests
+└── OpenMedSphere.Application.Tests/   # Command handler unit tests with Moq
 ```
 
 ### Domain Layer Structure
@@ -40,11 +43,17 @@ OpenMedSphere.Domain/
 ├── Entities/
 │   ├── PatientData.cs          # Patient data aggregate root
 │   ├── ResearchStudy.cs        # Research study aggregate root
-│   └── AnonymizationPolicy.cs  # Anonymization policy aggregate root
+│   ├── AnonymizationPolicy.cs  # Anonymization policy aggregate root
+│   └── AuditLogEntry.cs        # Audit log entry entity
+├── Events/
+│   ├── PatientDataCreatedEvent.cs    # Raised on patient data creation
+│   ├── PatientDataAnonymizedEvent.cs # Raised on anonymization
+│   └── ResearchStudyCreatedEvent.cs  # Raised on study creation
 ├── ValueObjects/
 │   ├── PatientIdentifier.cs    # Anonymized patient ID (record type)
 │   ├── DateRange.cs            # Date range with validation (record type)
-│   └── StudyCode.cs            # Unique study code (record type)
+│   ├── StudyCode.cs            # Unique study code (record type)
+│   └── MedicalCode.cs          # Structured medical code (record type)
 ├── Enums/
 │   └── AnonymizationLevel.cs   # None, Basic, Standard, Advanced, Full
 └── Primitives/
@@ -67,7 +76,8 @@ The codebase is designed to implement:
 - **Specification pattern** for complex queries
 - **Unit of Work pattern** for managing transactions
 - **Inbox/Outbox pattern** for distributed transactions
-- **Mediator pattern** for decoupling components
+- **Mediator pattern** for decoupling components (custom implementation with reflection caching)
+- **Validation pipeline** integrated into the mediator (custom `IValidator<T>`)
 - **Factory, Adapter, Observer, and Builder patterns** as appropriate
 
 ### Aspire Service Defaults
@@ -85,12 +95,15 @@ All services call `builder.AddServiceDefaults()` to register these features.
 
 ## Technology Stack
 
-- **.NET 10.0** (C# 14) - Preview/RC version
-- **.NET Aspire 9.5.2**: Cloud-native orchestration, service discovery, observability
+- **.NET 10.0** (C# 14)
+- **.NET Aspire 13.1.0**: Cloud-native orchestration, service discovery, observability
 - **Blazor WebAssembly**: Frontend with PWA/service worker support
-- **OpenTelemetry 1.14.0-rc.1**: Distributed tracing and observability
-- **xUnit**: Testing framework (planned)
-- **Moq**: Mocking framework for tests (planned)
+- **EF Core 10.0.2** with PostgreSQL (Npgsql)
+- **OpenTelemetry 1.15.0**: Distributed tracing and observability
+- **JWT Bearer Authentication**: API security with configurable JWT tokens
+- **Rate Limiting**: Built-in ASP.NET Core rate limiter (fixed window policies)
+- **xUnit 2.9.3**: Testing framework
+- **Moq 4.20.72**: Mocking framework for tests
 
 ## Development Commands
 
@@ -129,19 +142,18 @@ dotnet run --project src/Presentation/OpenMedSphere.Web/OpenMedSphere.Web.csproj
 ```
 
 ### Testing
-Tests are planned but not yet implemented. When added:
 ```bash
-# Run all tests
-dotnet test
+# Run all tests (108 tests: 93 domain + 15 application)
+dotnet test OpenMedSphere.slnx
 
-# Run tests in specific project
-dotnet test tests/OpenMedSphere.Tests/OpenMedSphere.Tests.csproj
+# Run domain tests only
+dotnet test tests/OpenMedSphere.Domain.Tests/OpenMedSphere.Domain.Tests.csproj
+
+# Run application tests only
+dotnet test tests/OpenMedSphere.Application.Tests/OpenMedSphere.Application.Tests.csproj
 
 # Run single test by name
 dotnet test --filter "FullyQualifiedName~MethodName_Scenario_ExpectedBehavior"
-
-# Run tests by category/trait
-dotnet test --filter "Category=Unit"
 ```
 
 ### Restore & Clean
@@ -162,7 +174,7 @@ Follow formatting in `.editorconfig` and `.github/copilot-instructions.md`:
 - **Nullable Reference Types**: Always enabled. Declare non-nullable by default, check for null at entry points
 - **Null Checks**: Use `is null` or `is not null` (NEVER `== null` or `!= null`)
 - **Namespaces**: Use block-scoped namespace declarations (per `.editorconfig`)
-- **var Usage**: Avoid `var` - use explicit types (`csharp_style_var_*` = false)
+- **var Usage**: Prefer `var` when the type is apparent (`csharp_style_var_*` = true)
 - **Pattern Matching**: Use pattern matching and switch expressions wherever possible
 - **Member Names**: Use `nameof()` instead of string literals
 - **Curly Braces**: Insert newline before opening brace of code blocks (`csharp_new_line_before_open_brace = all`)
@@ -191,12 +203,17 @@ Follow the established patterns in existing entities:
 - Use `required` modifier for mandatory properties
 - Track `CreatedAtUtc` and `UpdatedAtUtc` timestamps
 - Validate inputs using `ArgumentNullException.ThrowIfNull()`, `ArgumentException.ThrowIfNullOrWhiteSpace()`, etc.
+- Raise domain events in factory methods and critical state changes
+- Encapsulate mutable collections with private backing fields and `IReadOnlyCollection<T>` public properties
 
 Example:
 ```csharp
 public sealed class MyEntity : AggregateRoot<Guid>
 {
+    private readonly List<string> _items = [];
+
     public required string Name { get; set; }
+    public IReadOnlyCollection<string> Items => _items.AsReadOnly();
     public DateTime CreatedAtUtc { get; init; }
     public DateTime? UpdatedAtUtc { get; set; }
 
@@ -206,10 +223,19 @@ public sealed class MyEntity : AggregateRoot<Guid>
     public static MyEntity Create(string name)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
-        return new MyEntity(Guid.NewGuid()) { Name = name };
+        var entity = new MyEntity(Guid.NewGuid()) { Name = name };
+        entity.RaiseDomainEvent(new MyEntityCreatedEvent(entity.Id));
+        return entity;
     }
 }
 ```
+
+### Validation Patterns
+- Custom `IValidator<T>` interface in `Application/Messaging/`
+- Validators are auto-discovered and registered alongside handlers in DI
+- The mediator runs validation before dispatching to handlers
+- Use simple `if` checks that add `ValidationError` entries
+- Validators return `ValidationResult` (not exceptions)
 
 ### Testing Conventions
 - **Framework**: xUnit for all tests
@@ -226,12 +252,18 @@ This solution uses **Central Package Management** via `Directory.Packages.props`
 ### Current Package Versions
 | Package | Version |
 |---------|---------|
-| Aspire.Hosting.AppHost | 9.5.2 |
-| Microsoft.AspNetCore.OpenApi | 10.0.0-rc.2 |
-| Microsoft.AspNetCore.Components.WebAssembly | 10.0.0-rc.2 |
-| Microsoft.Extensions.Http.Resilience | 9.10.0 |
-| Microsoft.Extensions.ServiceDiscovery | 9.5.2 |
-| OpenTelemetry.* | 1.13.0 - 1.14.0-rc.1 |
+| Aspire.Hosting.AppHost | 13.1.0 |
+| Microsoft.AspNetCore.Authentication.JwtBearer | 10.0.2 |
+| Microsoft.AspNetCore.OpenApi | 10.0.2 |
+| Microsoft.AspNetCore.Components.WebAssembly | 10.0.2 |
+| Microsoft.EntityFrameworkCore | 10.0.2 |
+| Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.0 |
+| Microsoft.Extensions.Http.Resilience | 10.2.0 |
+| Microsoft.Extensions.ServiceDiscovery | 10.2.0 |
+| OpenTelemetry.* | 1.15.0 |
+| Scalar.AspNetCore | 2.12.35 |
+| xUnit | 2.9.3 |
+| Moq | 4.20.72 |
 
 ### Adding New Packages
 1. Add version to `Directory.Packages.props`:
@@ -263,6 +295,28 @@ AppHost uses User Secrets for local development:
 - **Secret ID**: `dba9a07f-af44-47a8-832c-910ca1722e64`
 - Manage with: `dotnet user-secrets set "key" "value" --project src/Presentation/OpenMedSphere.AppHost`
 
+## API Security
+
+### Authentication
+- **JWT Bearer** authentication on all API endpoints
+- Configuration via `Jwt:Key`, `Jwt:Issuer`, `Jwt:Audience` settings (with dev defaults)
+- Development token endpoint: `POST /api/auth/dev-token` (only available in Development environment)
+
+### Rate Limiting
+- **Fixed window** policy (100 requests/minute) for read endpoints (GET)
+- **Write** policy (30 requests/minute) for write endpoints (POST, PUT, DELETE)
+- Returns HTTP 429 when exceeded
+
+### Input Validation
+- Custom `IValidator<T>` pipeline integrated into the mediator
+- All commands and queries are validated before handler execution
+- Validation errors return HTTP 400 with detailed error messages
+
+### Audit Logging
+- EF Core `SaveChangesInterceptor` tracks changes to `PatientData`, `ResearchStudy`, and `AnonymizationPolicy` entities
+- Records entity type, ID, action (Created/Modified/Deleted), old/new values as JSON, and timestamp
+- Stored in the `AuditLog` table
+
 ## CI/CD
 
 GitHub Actions workflow (`.github/workflows/pr-validation.yml`):
@@ -278,26 +332,50 @@ GitHub Actions workflow (`.github/workflows/pr-validation.yml`):
 - Aspire orchestration with AppHost (API + Frontend with health checks)
 - ServiceDefaults with OpenTelemetry, health checks, resilience
 - Basic Blazor WebAssembly frontend with PWA support
-- API with sample weather forecast endpoint and OpenAPI support
-- **Domain Layer (substantially complete):**
-  - Aggregate roots: `PatientData`, `ResearchStudy`, `AnonymizationPolicy`
-  - Value objects: `PatientIdentifier`, `DateRange`, `StudyCode`
+- API with OpenAPI support and Scalar API reference
+- **Domain Layer (complete):**
+  - Aggregate roots: `PatientData`, `ResearchStudy`, `AnonymizationPolicy`, `AuditLogEntry`
+  - Value objects: `PatientIdentifier`, `DateRange`, `StudyCode`, `MedicalCode`
+  - Domain events: `PatientDataCreatedEvent`, `PatientDataAnonymizedEvent`, `ResearchStudyCreatedEvent`
   - Enums: `AnonymizationLevel` (None, Basic, Standard, Advanced, Full)
   - Primitives: `Entity<TId>`, `AggregateRoot<TId>`, `ValueObject`, `IDomainEvent`
-  - Domain event infrastructure in aggregate roots
+  - Encapsulated mutable collections with IReadOnlyCollection properties
+- **Application Layer (complete):**
+  - Custom mediator with reflection caching for handler/validator lookup
+  - CQRS commands/queries for PatientData, ResearchStudy, AnonymizationPolicy, MedicalTerminology
+  - Custom validation pipeline (`IValidator<T>`, `ValidationResult`)
+  - Specification pattern for complex queries
+- **Infrastructure Layer (complete):**
+  - EF Core with PostgreSQL via Npgsql
+  - Generic repository pattern with specification evaluator
+  - ICD-11 medical terminology integration (API + fallback static dataset)
+  - Memory cache with size limits
+  - Audit logging via SaveChangesInterceptor
+  - Database indexes on key query columns
+- **API Layer (complete):**
+  - JWT Bearer authentication on all endpoints
+  - Rate limiting (fixed window for reads, write policy for mutations)
+  - Development token endpoint
+  - Minimal API endpoints for all entities and medical terminology
+- **Testing (108 tests):**
+  - Domain entity tests (PatientData, ResearchStudy, AnonymizationPolicy)
+  - Value object tests (PatientIdentifier, DateRange, StudyCode, MedicalCode)
+  - Command handler tests with Moq (CreatePatientData, AnonymizePatientData, CreateResearchStudy, CreateAnonymizationPolicy)
 
 **Planned (Not Yet Implemented):**
-- Application layer with CQRS commands/queries
-- Repository interfaces and implementations
-- Database context (EF Core)
-- Unit and integration tests
 - Quantum-safe encryption services (CRYSTALS-Kyber, Falcon)
 - Message queue integration (RabbitMQ/Kafka)
+- Integration tests
+- Blazor frontend connected to API
 
 ## Security Considerations
 
 - Avoid OWASP Top 10 vulnerabilities (XSS, SQL injection, command injection, etc.)
+- LIKE wildcard injection prevented in repository queries (escaping `%`, `_`, `\`)
 - Never commit secrets, API keys, or tokens
 - Use User Secrets for local development
+- JWT authentication required on all data endpoints
+- Rate limiting to prevent abuse
+- Audit logging for compliance tracking
 - Future: Implement HIPAA and GDPR compliance requirements
 - Future: Quantum-safe encryption for data at rest and in transit
