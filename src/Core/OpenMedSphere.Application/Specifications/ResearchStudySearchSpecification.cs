@@ -27,16 +27,19 @@ public sealed class ResearchStudySearchSpecification : Specification<ResearchStu
         int page = 1,
         int pageSize = 20)
     {
+        page = Math.Max(page, 1);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+
         if (!string.IsNullOrWhiteSpace(researchArea))
         {
-            var researchAreaLower = researchArea.ToLower();
+            var researchAreaLower = EscapeLikeWildcards(researchArea.ToLower());
             AddFilter(r => r.ResearchArea != null &&
                            r.ResearchArea.ToLower().Contains(researchAreaLower));
         }
 
         if (!string.IsNullOrWhiteSpace(titleSearch))
         {
-            var titleLower = titleSearch.ToLower();
+            var titleLower = EscapeLikeWildcards(titleSearch.ToLower());
             AddFilter(r => r.Title.ToLower().Contains(titleLower));
         }
 
@@ -54,4 +57,10 @@ public sealed class ResearchStudySearchSpecification : Specification<ResearchStu
         AddOrderByDescending(r => r.CreatedAtUtc);
         ApplyPaging((page - 1) * pageSize, pageSize);
     }
+
+    private static string EscapeLikeWildcards(string input) =>
+        input
+            .Replace("\\", "\\\\")
+            .Replace("%", "\\%")
+            .Replace("_", "\\_");
 }

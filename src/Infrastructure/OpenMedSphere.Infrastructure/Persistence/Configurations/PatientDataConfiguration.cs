@@ -69,6 +69,7 @@ internal sealed class PatientDataConfiguration : IEntityTypeConfiguration<Patien
         builder.HasIndex(p => p.IsAnonymized);
         builder.HasIndex(p => p.CollectedAtUtc);
         builder.HasIndex(p => p.AnonymizationPolicyId);
+        builder.HasIndex(p => p.Region);
         builder.HasIndex("PatientIdentifier").HasDatabaseName("IX_PatientData_PatientIdentifier");
 
         builder.Ignore(p => p.DomainEvents);

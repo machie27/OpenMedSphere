@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using Microsoft.Extensions.Logging;
 using OpenMedSphere.Application.Abstractions.MedicalTerminology;
 using OpenMedSphere.Application.MedicalTerminology.Queries.SearchMedicalCodes;
 using OpenMedSphere.Application.Messaging;
@@ -19,7 +21,23 @@ public static class MedicalTerminologyEndpoints
         RouteGroupBuilder group = app.MapGroup("/api/medical-codes")
             .WithTags("Medical Terminology")
             .RequireAuthorization()
-            .RequireRateLimiting("fixed");
+            .RequireRateLimiting("fixed")
+            .AddEndpointFilter(async (context, next) =>
+            {
+                var user = context.HttpContext.User;
+                var userId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? "unknown";
+                var logger = context.HttpContext.RequestServices
+                    .GetRequiredService<ILoggerFactory>()
+                    .CreateLogger(nameof(MedicalTerminologyEndpoints));
+
+                logger.LogInformation(
+                    "User {UserId} accessing medical terminology: {Method} {Path}",
+                    userId,
+                    context.HttpContext.Request.Method,
+                    context.HttpContext.Request.Path);
+
+                return await next(context);
+            });
 
         group.MapGet("/coding-systems", GetCodingSystems)
             .WithName("GetCodingSystems")

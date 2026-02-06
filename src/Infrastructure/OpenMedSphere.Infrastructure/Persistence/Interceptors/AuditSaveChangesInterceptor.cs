@@ -50,7 +50,16 @@ internal sealed class AuditSaveChangesInterceptor : SaveChangesInterceptor
             }
 
             string entityType = entry.Entity.GetType().Name;
-            string entityId = entry.Property("Id").CurrentValue?.ToString() ?? string.Empty;
+
+            string entityId;
+            try
+            {
+                entityId = entry.Property("Id").CurrentValue?.ToString() ?? string.Empty;
+            }
+            catch (InvalidOperationException)
+            {
+                entityId = string.Empty;
+            }
 
             string? action = entry.State switch
             {

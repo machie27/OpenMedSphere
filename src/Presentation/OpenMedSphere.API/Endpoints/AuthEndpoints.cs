@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 
 namespace OpenMedSphere.API.Endpoints;
@@ -23,13 +24,19 @@ public static class AuthEndpoints
         group.MapPost("/dev-token", GenerateDevToken)
             .WithName("GenerateDevToken")
             .AllowAnonymous()
+            .RequireRateLimiting("write")
             .Produces<DevTokenResponse>();
 
         return app;
     }
 
-    private static IResult GenerateDevToken(IConfiguration configuration)
+    private static IResult GenerateDevToken(IConfiguration configuration, IHostEnvironment environment)
     {
+        if (!environment.IsDevelopment())
+        {
+            return Results.NotFound();
+        }
+
         string key = configuration["Jwt:Key"] ?? "OpenMedSphere-Development-Key-That-Is-At-Least-32-Bytes!";
         string issuer = configuration["Jwt:Issuer"] ?? "OpenMedSphere-Dev";
         string audience = configuration["Jwt:Audience"] ?? "OpenMedSphere-Dev";

@@ -16,7 +16,7 @@ internal sealed partial class Mediator(
     private static readonly ConcurrentDictionary<Type, (Type HandlerType, MethodInfo HandleMethod)> CommandHandlerCache = new();
     private static readonly ConcurrentDictionary<Type, (Type HandlerType, MethodInfo HandleMethod)> CommandWithResponseHandlerCache = new();
     private static readonly ConcurrentDictionary<Type, (Type HandlerType, MethodInfo HandleMethod)> QueryHandlerCache = new();
-    private static readonly ConcurrentDictionary<Type, Type?> ValidatorTypeCache = new();
+    private static readonly ConcurrentDictionary<Type, (Type ValidatorType, MethodInfo ValidateMethod)> ValidatorCache = new();
 
     /// <inheritdoc />
     public async Task<Result> SendAsync(ICommand command, CancellationToken cancellationToken = default)
@@ -188,13 +188,13 @@ internal sealed partial class Mediator(
 
     private async Task<Result?> ValidateAsync<T>(Type messageType, T message)
     {
-        Type? validatorType = ValidatorTypeCache.GetOrAdd(messageType,
-            static type => typeof(IValidator<>).MakeGenericType(type));
-
-        if (validatorType is null)
+        var (validatorType, validateMethod) = ValidatorCache.GetOrAdd(messageType, static type =>
         {
-            return null;
-        }
+            var vt = typeof(IValidator<>).MakeGenericType(type);
+            var vm = vt.GetMethod(nameof(IValidator<object>.Validate))
+                ?? throw new InvalidOperationException($"IValidator<{type.Name}> does not have a Validate method.");
+            return (vt, vm);
+        });
 
         object? validator = serviceProvider.GetService(validatorType);
         if (validator is null)
@@ -202,7 +202,6 @@ internal sealed partial class Mediator(
             return null;
         }
 
-        MethodInfo validateMethod = validatorType.GetMethod(nameof(IValidator<object>.Validate))!;
         object validationResultObj = validateMethod.Invoke(validator, [message])!;
         ValidationResult validationResult = (ValidationResult)validationResultObj;
 

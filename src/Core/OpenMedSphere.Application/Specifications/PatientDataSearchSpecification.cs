@@ -28,9 +28,12 @@ public sealed class PatientDataSearchSpecification : Specification<Domain.Entiti
         int page = 1,
         int pageSize = 20)
     {
+        page = Math.Max(page, 1);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+
         if (!string.IsNullOrWhiteSpace(diagnosisText))
         {
-            var diagnosisTextLower = diagnosisText.ToLower();
+            var diagnosisTextLower = EscapeLikeWildcards(diagnosisText.ToLower());
             AddFilter(p =>
                 (p.PrimaryDiagnosis != null && p.PrimaryDiagnosis.ToLower().Contains(diagnosisTextLower)) ||
                 p.SecondaryDiagnoses.Any(d => d.ToLower().Contains(diagnosisTextLower)));
@@ -45,7 +48,8 @@ public sealed class PatientDataSearchSpecification : Specification<Domain.Entiti
 
         if (!string.IsNullOrWhiteSpace(region))
         {
-            AddFilter(p => p.Region != null && p.Region.ToLower().Contains(region.ToLower()));
+            var regionLower = EscapeLikeWildcards(region.ToLower());
+            AddFilter(p => p.Region != null && p.Region.ToLower().Contains(regionLower));
         }
 
         if (anonymizedOnly.HasValue)
@@ -66,4 +70,10 @@ public sealed class PatientDataSearchSpecification : Specification<Domain.Entiti
         AddOrderByDescending(p => p.CreatedAtUtc);
         ApplyPaging((page - 1) * pageSize, pageSize);
     }
+
+    private static string EscapeLikeWildcards(string input) =>
+        input
+            .Replace("\\", "\\\\")
+            .Replace("%", "\\%")
+            .Replace("_", "\\_");
 }
