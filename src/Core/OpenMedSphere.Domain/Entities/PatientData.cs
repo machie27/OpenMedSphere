@@ -37,9 +37,19 @@ public sealed class PatientData : AggregateRoot<Guid>
     public string? PrimaryDiagnosis { get; set; }
 
     /// <summary>
+    /// Gets the structured medical code for the primary diagnosis.
+    /// </summary>
+    public MedicalCode? PrimaryDiagnosisCode { get; set; }
+
+    /// <summary>
     /// Gets the list of secondary diagnoses.
     /// </summary>
     public List<string> SecondaryDiagnoses { get; init; } = [];
+
+    /// <summary>
+    /// Gets the list of structured medical codes for secondary diagnoses.
+    /// </summary>
+    public List<MedicalCode> SecondaryDiagnosisCodes { get; init; } = [];
 
     /// <summary>
     /// Gets the list of medications.
@@ -108,7 +118,7 @@ public sealed class PatientData : AggregateRoot<Guid>
     {
         ArgumentNullException.ThrowIfNull(patientId);
 
-        return new PatientData(Guid.NewGuid())
+        return new PatientData(Guid.CreateVersion7())
         {
             PatientId = patientId
         };
@@ -124,7 +134,7 @@ public sealed class PatientData : AggregateRoot<Guid>
     {
         if (yearOfBirth.HasValue)
         {
-            var currentYear = DateTime.UtcNow.Year;
+            int currentYear = DateTime.UtcNow.Year;
             ArgumentOutOfRangeException.ThrowIfLessThan(yearOfBirth.Value, MinYearOfBirth);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(yearOfBirth.Value, currentYear);
         }
@@ -145,6 +155,42 @@ public sealed class PatientData : AggregateRoot<Guid>
 
         PrimaryDiagnosis = diagnosis;
         UpdatedAtUtc = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Sets the structured medical code for the primary diagnosis.
+    /// Also syncs the free-text <see cref="PrimaryDiagnosis"/> field.
+    /// </summary>
+    /// <param name="code">The medical code.</param>
+    public void SetPrimaryDiagnosisCode(MedicalCode code)
+    {
+        ArgumentNullException.ThrowIfNull(code);
+
+        PrimaryDiagnosisCode = code;
+        PrimaryDiagnosis = code.DisplayName;
+        UpdatedAtUtc = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Adds a structured medical code for a secondary diagnosis.
+    /// Also adds the display name to the free-text <see cref="SecondaryDiagnoses"/> list.
+    /// </summary>
+    /// <param name="code">The medical code.</param>
+    public void AddSecondaryDiagnosisCode(MedicalCode code)
+    {
+        ArgumentNullException.ThrowIfNull(code);
+
+        if (!SecondaryDiagnosisCodes.Any(c => c.Code == code.Code && c.CodingSystem == code.CodingSystem))
+        {
+            SecondaryDiagnosisCodes.Add(code);
+
+            if (!SecondaryDiagnoses.Contains(code.DisplayName))
+            {
+                SecondaryDiagnoses.Add(code.DisplayName);
+            }
+
+            UpdatedAtUtc = DateTime.UtcNow;
+        }
     }
 
     /// <summary>

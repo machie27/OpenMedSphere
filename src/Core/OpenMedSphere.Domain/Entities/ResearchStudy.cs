@@ -122,7 +122,7 @@ public sealed class ResearchStudy : AggregateRoot<Guid>
         ArgumentException.ThrowIfNullOrWhiteSpace(institution);
         ArgumentNullException.ThrowIfNull(studyPeriod);
 
-        return new ResearchStudy(Guid.NewGuid())
+        return new ResearchStudy(Guid.CreateVersion7())
         {
             Code = code,
             Title = title,

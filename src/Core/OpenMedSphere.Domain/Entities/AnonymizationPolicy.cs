@@ -90,7 +90,7 @@ public sealed class AnonymizationPolicy : AggregateRoot<Guid>
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
-        return new AnonymizationPolicy(Guid.NewGuid())
+        return new AnonymizationPolicy(Guid.CreateVersion7())
         {
             Name = name,
             Level = level,

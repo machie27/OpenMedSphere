@@ -1,6 +1,117 @@
 @OpenMedSphere.API_HostAddress = http://localhost:5158
 
-GET {{OpenMedSphere.API_HostAddress}}/weatherforecast/
+### ──────────────────────────────────────────────
+### Patient Data
+### ──────────────────────────────────────────────
+
+### Get Patient Data by ID
+GET {{OpenMedSphere.API_HostAddress}}/api/patient-data/a1b2c3d4-0000-0000-0000-000000000001
+Accept: application/json
+
+###
+
+### Search Patient Data
+GET {{OpenMedSphere.API_HostAddress}}/api/patient-data/search?DiagnosisText=diabetes&Region=North%20America&AnonymizedOnly=true&Page=1&PageSize=10
+Accept: application/json
+
+###
+
+### Create Patient Data
+POST {{OpenMedSphere.API_HostAddress}}/api/patient-data/
+Content-Type: application/json
+
+{
+  "yearOfBirth": 1985,
+  "gender": "Female",
+  "region": "North America",
+  "primaryDiagnosis": "Type 2 diabetes mellitus",
+  "primaryDiagnosisIcdCode": "5A11",
+  "secondaryDiagnoses": [
+    "Essential hypertension",
+    "Obesity"
+  ],
+  "medications": [
+    "Metformin 500mg",
+    "Lisinopril 10mg"
+  ],
+  "clinicalNotes": "Patient presents with well-controlled HbA1c of 6.8%. Blood pressure within target range."
+}
+
+###
+
+### Anonymize Patient Data
+POST {{OpenMedSphere.API_HostAddress}}/api/patient-data/a1b2c3d4-0000-0000-0000-000000000001/anonymize
+Content-Type: application/json
+
+{
+  "policyId": "b2c3d4e5-0000-0000-0000-000000000001"
+}
+
+### ──────────────────────────────────────────────
+### Research Studies
+### ──────────────────────────────────────────────
+
+### Search Research Studies
+GET {{OpenMedSphere.API_HostAddress}}/api/research-studies/search?ResearchArea=Cardiology&ActiveOnly=true&Page=1&PageSize=10
+Accept: application/json
+
+###
+
+### Create Research Study
+POST {{OpenMedSphere.API_HostAddress}}/api/research-studies/
+Content-Type: application/json
+
+{
+  "studyCode": "CARD-2026-001",
+  "title": "Hypertension Outcomes in Post-Menopausal Women",
+  "description": "A longitudinal study examining the efficacy of combined antihypertensive therapy in post-menopausal women aged 50-70.",
+  "principalInvestigator": "Dr. Sarah Chen",
+  "institution": "Johns Hopkins University",
+  "studyPeriodStart": "2026-03-01T00:00:00Z",
+  "studyPeriodEnd": "2028-03-01T00:00:00Z",
+  "anonymizationPolicyId": "b2c3d4e5-0000-0000-0000-000000000001",
+  "researchArea": "Cardiology",
+  "maxParticipants": 500
+}
+
+### ──────────────────────────────────────────────
+### Anonymization Policies
+### ──────────────────────────────────────────────
+
+### Get All Anonymization Policies
+GET {{OpenMedSphere.API_HostAddress}}/api/anonymization-policies/
+Accept: application/json
+
+###
+
+### Create Anonymization Policy
+POST {{OpenMedSphere.API_HostAddress}}/api/anonymization-policies/
+Content-Type: application/json
+
+{
+  "name": "Standard Research Policy",
+  "description": "Applies k-anonymity with generalization of birth dates and locations. Suitable for most observational studies.",
+  "level": 2
+}
+
+### ──────────────────────────────────────────────
+### Medical Terminology
+### ──────────────────────────────────────────────
+
+### Get Supported Coding Systems
+GET {{OpenMedSphere.API_HostAddress}}/api/medical-codes/coding-systems
+Accept: application/json
+
+###
+
+### Search Medical Codes
+GET {{OpenMedSphere.API_HostAddress}}/api/medical-codes/search?q=diabetes&codingSystem=ICD-11
+Accept: application/json
+
+###
+
+### Get Medical Code by Code
+GET {{OpenMedSphere.API_HostAddress}}/api/medical-codes/5A11?codingSystem=ICD-11
 Accept: application/json
 
 ###
