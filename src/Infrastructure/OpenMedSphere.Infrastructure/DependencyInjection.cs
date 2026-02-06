@@ -35,6 +35,13 @@ public static class DependencyInjection
     {
         string? connectionString = configuration.GetConnectionString("openmedsphere-db");
 
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw new InvalidOperationException(
+                "The connection string 'openmedsphere-db' is not configured. " +
+                "Ensure your configuration includes a valid database connection string.");
+        }
+
         services.AddSingleton<AuditSaveChangesInterceptor>();
 
         services.AddDbContext<ApplicationDbContext>((sp, options) =>

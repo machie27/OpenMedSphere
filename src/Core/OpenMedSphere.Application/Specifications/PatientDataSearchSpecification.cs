@@ -30,9 +30,10 @@ public sealed class PatientDataSearchSpecification : Specification<Domain.Entiti
     {
         if (!string.IsNullOrWhiteSpace(diagnosisText))
         {
+            var diagnosisTextLower = diagnosisText.ToLower();
             AddFilter(p =>
-                (p.PrimaryDiagnosis != null && p.PrimaryDiagnosis.ToLower().Contains(diagnosisText.ToLower())) ||
-                p.SecondaryDiagnoses.Any(d => d.ToLower().Contains(diagnosisText.ToLower())));
+                (p.PrimaryDiagnosis != null && p.PrimaryDiagnosis.ToLower().Contains(diagnosisTextLower)) ||
+                p.SecondaryDiagnoses.Any(d => d.ToLower().Contains(diagnosisTextLower)));
         }
 
         if (!string.IsNullOrWhiteSpace(icdCode))

@@ -21,7 +21,7 @@ public static class MedicalTerminologyEndpoints
             .RequireAuthorization()
             .RequireRateLimiting("fixed");
 
-        group.MapGet("/coding-systems", GetCodingSystemsAsync)
+        group.MapGet("/coding-systems", GetCodingSystems)
             .WithName("GetCodingSystems")
             .Produces<IReadOnlyList<string>>();
 
@@ -37,7 +37,7 @@ public static class MedicalTerminologyEndpoints
         return app;
     }
 
-    private static IResult GetCodingSystemsAsync(IMedicalTerminologyService terminologyService)
+    private static IResult GetCodingSystems(IMedicalTerminologyService terminologyService)
     {
         IReadOnlyList<string> systems = terminologyService.GetSupportedCodingSystems();
         return Results.Ok(systems);

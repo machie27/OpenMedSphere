@@ -117,7 +117,9 @@ public static class PatientDataEndpoints
 
         return result.IsSuccess
             ? Results.NoContent()
-            : Results.BadRequest(result.Error);
+            : result.Error?.Contains("not found", StringComparison.OrdinalIgnoreCase) == true
+                ? Results.NotFound(result.Error)
+                : Results.BadRequest(result.Error);
     }
 }
 

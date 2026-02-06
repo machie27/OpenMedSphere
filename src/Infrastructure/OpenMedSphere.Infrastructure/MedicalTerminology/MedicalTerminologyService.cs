@@ -91,6 +91,7 @@ internal sealed partial class MedicalTerminologyService(
             MedicalCode? result = await provider.GetByEntityUriAsync(entityUri, cancellationToken);
             if (result is not null)
             {
+                LogEntityUriLookupCompleted(entityUri, provider.CodingSystem);
                 return result;
             }
         }

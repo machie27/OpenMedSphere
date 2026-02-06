@@ -8,9 +8,12 @@ namespace OpenMedSphere.Infrastructure.MedicalTerminology;
 /// <summary>
 /// HTTP delegating handler that obtains and caches OAuth2 bearer tokens for the ICD-11 API.
 /// </summary>
-internal sealed class Icd11AuthenticationHandler(IOptions<Icd11ApiOptions> options) : DelegatingHandler
+internal sealed class Icd11AuthenticationHandler(
+    IOptions<Icd11ApiOptions> options,
+    IHttpClientFactory httpClientFactory) : DelegatingHandler
 {
     private readonly Icd11ApiOptions _options = options.Value;
+    private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
     private string? _cachedToken;
     private DateTime _tokenExpiry = DateTime.MinValue;
     private readonly SemaphoreSlim _semaphore = new(1, 1);
@@ -40,7 +43,7 @@ internal sealed class Icd11AuthenticationHandler(IOptions<Icd11ApiOptions> optio
                 return _cachedToken;
             }
 
-            using HttpClient tokenClient = new();
+            using var tokenClient = _httpClientFactory.CreateClient();
 
             List<KeyValuePair<string, string>> formData =
             [

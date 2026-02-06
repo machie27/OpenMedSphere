@@ -29,13 +29,15 @@ public sealed class ResearchStudySearchSpecification : Specification<ResearchStu
     {
         if (!string.IsNullOrWhiteSpace(researchArea))
         {
+            var researchAreaLower = researchArea.ToLower();
             AddFilter(r => r.ResearchArea != null &&
-                           r.ResearchArea.ToLower().Contains(researchArea.ToLower()));
+                           r.ResearchArea.ToLower().Contains(researchAreaLower));
         }
 
         if (!string.IsNullOrWhiteSpace(titleSearch))
         {
-            AddFilter(r => r.Title.ToLower().Contains(titleSearch.ToLower()));
+            var titleLower = titleSearch.ToLower();
+            AddFilter(r => r.Title.ToLower().Contains(titleLower));
         }
 
         if (activeOnly.HasValue)
