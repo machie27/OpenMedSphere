@@ -33,7 +33,7 @@ public static class MedicalTerminologyEndpoints
                 logger.LogInformation(
                     "User {UserId} accessing medical terminology: {Method} {Path}",
                     userId,
-                    context.HttpContext.Request.Method,
+                     SanitizeLogValue(context.HttpContext.Request.Method),
                     SanitizeLogValue(context.HttpContext.Request.Path));
 
                 return await next(context);
