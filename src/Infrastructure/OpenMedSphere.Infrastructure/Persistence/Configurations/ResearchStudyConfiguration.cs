@@ -15,13 +15,19 @@ internal sealed class ResearchStudyConfiguration : IEntityTypeConfiguration<Rese
 
         builder.HasKey(r => r.Id);
 
-        builder.ComplexProperty(r => r.Code, code =>
+        builder.OwnsOne(r => r.Code, code =>
         {
             code.Property(c => c.Value)
                 .HasColumnName("StudyCode")
                 .HasMaxLength(50)
                 .IsRequired();
+
+            code.HasIndex(c => c.Value)
+                .IsUnique()
+                .HasDatabaseName("IX_ResearchStudies_StudyCode");
         });
+
+        builder.Navigation(r => r.Code).IsRequired();
 
         builder.ComplexProperty(r => r.StudyPeriod, period =>
         {
@@ -51,7 +57,6 @@ internal sealed class ResearchStudyConfiguration : IEntityTypeConfiguration<Rese
         builder.HasIndex(r => r.AnonymizationPolicyId);
         builder.HasIndex(r => r.ResearchArea);
         builder.HasIndex(r => r.IsActive);
-        builder.HasIndex("StudyCode").IsUnique().HasDatabaseName("IX_ResearchStudies_StudyCode");
 
         builder.Ignore(r => r.DomainEvents);
         builder.Ignore(r => r.CurrentParticipantCount);

@@ -16,13 +16,18 @@ internal sealed class PatientDataConfiguration : IEntityTypeConfiguration<Patien
 
         builder.HasKey(p => p.Id);
 
-        builder.ComplexProperty(p => p.PatientId, patientId =>
+        builder.OwnsOne(p => p.PatientId, patientId =>
         {
             patientId.Property(pi => pi.Value)
                 .HasColumnName("PatientIdentifier")
                 .HasMaxLength(100)
                 .IsRequired();
+
+            patientId.HasIndex(pi => pi.Value)
+                .HasDatabaseName("IX_PatientData_PatientIdentifier");
         });
+
+        builder.Navigation(p => p.PatientId).IsRequired();
 
         builder.Property(p => p.YearOfBirth);
         builder.Property(p => p.Gender).HasMaxLength(50);
@@ -70,7 +75,6 @@ internal sealed class PatientDataConfiguration : IEntityTypeConfiguration<Patien
         builder.HasIndex(p => p.CollectedAtUtc);
         builder.HasIndex(p => p.AnonymizationPolicyId);
         builder.HasIndex(p => p.Region);
-        builder.HasIndex("PatientIdentifier").HasDatabaseName("IX_PatientData_PatientIdentifier");
 
         builder.Ignore(p => p.DomainEvents);
         builder.Ignore(p => p.SecondaryDiagnoses);

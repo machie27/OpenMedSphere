@@ -8,13 +8,29 @@ using OpenMedSphere.API.Endpoints;
 using OpenMedSphere.Application;
 using OpenMedSphere.Infrastructure;
 using OpenMedSphere.Infrastructure.Persistence;
+using Microsoft.OpenApi;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
 
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(options =>
+{
+    options.AddDocumentTransformer((document, context, cancellationToken) =>
+    {
+        document.Components ??= new OpenApiComponents();
+        document.Components.SecuritySchemes ??= new Dictionary<string, IOpenApiSecurityScheme>();
+        document.Components.SecuritySchemes["Bearer"] = new OpenApiSecurityScheme
+        {
+            Type = SecuritySchemeType.Http,
+            Scheme = "bearer",
+            BearerFormat = "JWT",
+            Description = "Paste your JWT token (from POST /api/auth/dev-token)"
+        };
+        return Task.CompletedTask;
+    });
+});
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
@@ -76,7 +92,11 @@ if (app.Environment.IsDevelopment())
     }
 
     app.MapOpenApi();
-    app.MapScalarApiReference();
+    app.MapScalarApiReference(options =>
+    {
+        options.AddHttpAuthentication("Bearer", _ => { });
+        options.AddPreferredSecuritySchemes("Bearer");
+    });
     app.MapAuthEndpoints();
 }
 

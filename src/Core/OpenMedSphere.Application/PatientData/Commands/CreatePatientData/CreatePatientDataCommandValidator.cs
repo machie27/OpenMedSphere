@@ -49,14 +49,30 @@ internal sealed class CreatePatientDataCommandValidator : IValidator<CreatePatie
             errors.Add(new ValidationError(nameof(instance.ClinicalNotes), $"Clinical notes must not exceed {ValidationConstants.MaxNotesLength} characters."));
         }
 
-        if (instance.SecondaryDiagnoses is not null && instance.SecondaryDiagnoses.Count > ValidationConstants.MaxSecondaryDiagnoses)
+        if (instance.SecondaryDiagnoses is not null)
         {
-            errors.Add(new ValidationError(nameof(instance.SecondaryDiagnoses), $"Secondary diagnoses list must not exceed {ValidationConstants.MaxSecondaryDiagnoses} items."));
+            if (instance.SecondaryDiagnoses.Count > ValidationConstants.MaxSecondaryDiagnoses)
+            {
+                errors.Add(new ValidationError(nameof(instance.SecondaryDiagnoses), $"Secondary diagnoses list must not exceed {ValidationConstants.MaxSecondaryDiagnoses} items."));
+            }
+
+            if (instance.SecondaryDiagnoses.Any(string.IsNullOrWhiteSpace))
+            {
+                errors.Add(new ValidationError(nameof(instance.SecondaryDiagnoses), "Secondary diagnoses must not contain empty entries."));
+            }
         }
 
-        if (instance.Medications is not null && instance.Medications.Count > ValidationConstants.MaxMedications)
+        if (instance.Medications is not null)
         {
-            errors.Add(new ValidationError(nameof(instance.Medications), $"Medications list must not exceed {ValidationConstants.MaxMedications} items."));
+            if (instance.Medications.Count > ValidationConstants.MaxMedications)
+            {
+                errors.Add(new ValidationError(nameof(instance.Medications), $"Medications list must not exceed {ValidationConstants.MaxMedications} items."));
+            }
+
+            if (instance.Medications.Any(string.IsNullOrWhiteSpace))
+            {
+                errors.Add(new ValidationError(nameof(instance.Medications), "Medications must not contain empty entries."));
+            }
         }
 
         return Task.FromResult(errors.Count == 0 ? ValidationResult.Success() : new ValidationResult { Errors = errors });
