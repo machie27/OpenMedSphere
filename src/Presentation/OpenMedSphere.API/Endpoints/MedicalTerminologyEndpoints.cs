@@ -25,8 +25,7 @@ public static class MedicalTerminologyEndpoints
             .AddEndpointFilter(async (context, next) =>
             {
                 var user = context.HttpContext.User;
-                var userId = (user.FindFirstValue(ClaimTypes.NameIdentifier) ?? "unknown")
-                    .Replace("\n", "").Replace("\r", "");
+                var userId = SanitizeLogValue(user.FindFirstValue(ClaimTypes.NameIdentifier));
                 var logger = context.HttpContext.RequestServices
                     .GetRequiredService<ILoggerFactory>()
                     .CreateLogger(nameof(MedicalTerminologyEndpoints));
@@ -35,7 +34,7 @@ public static class MedicalTerminologyEndpoints
                     "User {UserId} accessing medical terminology: {Method} {Path}",
                     userId,
                     context.HttpContext.Request.Method,
-                    context.HttpContext.Request.Path);
+                    SanitizeLogValue(context.HttpContext.Request.Path));
 
                 return await next(context);
             });
@@ -102,4 +101,10 @@ public static class MedicalTerminologyEndpoints
 
         return Results.Ok(response);
     }
+
+    /// <summary>
+    /// Strips line endings from a value before logging to prevent log forging (CWE-117).
+    /// </summary>
+    private static string SanitizeLogValue(string? value) =>
+        (value ?? "unknown").ReplaceLineEndings("");
 }
