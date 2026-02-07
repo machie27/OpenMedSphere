@@ -29,5 +29,5 @@ public sealed record PatientIdentifier
     /// </summary>
     /// <returns>A new patient identifier.</returns>
     public static PatientIdentifier Generate() =>
-        new() { Value = Guid.NewGuid().ToString() };
+        new() { Value = Guid.CreateVersion7().ToString() };
 }

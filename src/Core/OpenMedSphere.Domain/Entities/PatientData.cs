@@ -1,3 +1,4 @@
+using OpenMedSphere.Domain.Events;
 using OpenMedSphere.Domain.Primitives;
 using OpenMedSphere.Domain.ValueObjects;
 
@@ -10,6 +11,10 @@ namespace OpenMedSphere.Domain.Entities;
 public sealed class PatientData : AggregateRoot<Guid>
 {
     private const int MinYearOfBirth = 1900;
+
+    private readonly List<string> _secondaryDiagnoses = [];
+    private readonly List<MedicalCode> _secondaryDiagnosisCodes = [];
+    private readonly List<string> _medications = [];
 
     /// <summary>
     /// Gets the anonymized patient identifier.
@@ -37,14 +42,24 @@ public sealed class PatientData : AggregateRoot<Guid>
     public string? PrimaryDiagnosis { get; set; }
 
     /// <summary>
+    /// Gets the structured medical code for the primary diagnosis.
+    /// </summary>
+    public MedicalCode? PrimaryDiagnosisCode { get; set; }
+
+    /// <summary>
     /// Gets the list of secondary diagnoses.
     /// </summary>
-    public List<string> SecondaryDiagnoses { get; init; } = [];
+    public IReadOnlyCollection<string> SecondaryDiagnoses => _secondaryDiagnoses.AsReadOnly();
+
+    /// <summary>
+    /// Gets the list of structured medical codes for secondary diagnoses.
+    /// </summary>
+    public IReadOnlyCollection<MedicalCode> SecondaryDiagnosisCodes => _secondaryDiagnosisCodes.AsReadOnly();
 
     /// <summary>
     /// Gets the list of medications.
     /// </summary>
-    public List<string> Medications { get; init; } = [];
+    public IReadOnlyCollection<string> Medications => _medications.AsReadOnly();
 
     /// <summary>
     /// Gets the clinical notes (anonymized).
@@ -108,10 +123,14 @@ public sealed class PatientData : AggregateRoot<Guid>
     {
         ArgumentNullException.ThrowIfNull(patientId);
 
-        return new PatientData(Guid.NewGuid())
+        PatientData patientData = new(Guid.CreateVersion7())
         {
             PatientId = patientId
         };
+
+        patientData.RaiseDomainEvent(new PatientDataCreatedEvent(patientData.Id));
+
+        return patientData;
     }
 
     /// <summary>
@@ -124,7 +143,7 @@ public sealed class PatientData : AggregateRoot<Guid>
     {
         if (yearOfBirth.HasValue)
         {
-            var currentYear = DateTime.UtcNow.Year;
+            int currentYear = DateTime.UtcNow.Year;
             ArgumentOutOfRangeException.ThrowIfLessThan(yearOfBirth.Value, MinYearOfBirth);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(yearOfBirth.Value, currentYear);
         }
@@ -148,6 +167,42 @@ public sealed class PatientData : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Sets the structured medical code for the primary diagnosis.
+    /// Also syncs the free-text <see cref="PrimaryDiagnosis"/> field.
+    /// </summary>
+    /// <param name="code">The medical code.</param>
+    public void SetPrimaryDiagnosisCode(MedicalCode code)
+    {
+        ArgumentNullException.ThrowIfNull(code);
+
+        PrimaryDiagnosisCode = code;
+        PrimaryDiagnosis = code.DisplayName;
+        UpdatedAtUtc = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Adds a structured medical code for a secondary diagnosis.
+    /// Also adds the display name to the free-text <see cref="SecondaryDiagnoses"/> list.
+    /// </summary>
+    /// <param name="code">The medical code.</param>
+    public void AddSecondaryDiagnosisCode(MedicalCode code)
+    {
+        ArgumentNullException.ThrowIfNull(code);
+
+        if (!_secondaryDiagnosisCodes.Any(c => c.Code == code.Code && c.CodingSystem == code.CodingSystem))
+        {
+            _secondaryDiagnosisCodes.Add(code);
+
+            if (!_secondaryDiagnoses.Contains(code.DisplayName))
+            {
+                _secondaryDiagnoses.Add(code.DisplayName);
+            }
+
+            UpdatedAtUtc = DateTime.UtcNow;
+        }
+    }
+
+    /// <summary>
     /// Adds a secondary diagnosis to the patient record.
     /// </summary>
     /// <param name="diagnosis">The secondary diagnosis to add.</param>
@@ -155,9 +210,9 @@ public sealed class PatientData : AggregateRoot<Guid>
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(diagnosis);
 
-        if (!SecondaryDiagnoses.Contains(diagnosis))
+        if (!_secondaryDiagnoses.Contains(diagnosis))
         {
-            SecondaryDiagnoses.Add(diagnosis);
+            _secondaryDiagnoses.Add(diagnosis);
             UpdatedAtUtc = DateTime.UtcNow;
         }
     }
@@ -168,7 +223,7 @@ public sealed class PatientData : AggregateRoot<Guid>
     /// <param name="diagnosis">The secondary diagnosis to remove.</param>
     public void RemoveSecondaryDiagnosis(string diagnosis)
     {
-        if (SecondaryDiagnoses.Remove(diagnosis))
+        if (_secondaryDiagnoses.Remove(diagnosis))
         {
             UpdatedAtUtc = DateTime.UtcNow;
         }
@@ -182,9 +237,9 @@ public sealed class PatientData : AggregateRoot<Guid>
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(medication);
 
-        if (!Medications.Contains(medication))
+        if (!_medications.Contains(medication))
         {
-            Medications.Add(medication);
+            _medications.Add(medication);
             UpdatedAtUtc = DateTime.UtcNow;
         }
     }
@@ -195,7 +250,7 @@ public sealed class PatientData : AggregateRoot<Guid>
     /// <param name="medication">The medication to remove.</param>
     public void RemoveMedication(string medication)
     {
-        if (Medications.Remove(medication))
+        if (_medications.Remove(medication))
         {
             UpdatedAtUtc = DateTime.UtcNow;
         }
@@ -221,6 +276,8 @@ public sealed class PatientData : AggregateRoot<Guid>
         AnonymizedAtUtc = DateTime.UtcNow;
         IsAnonymized = true;
         UpdatedAtUtc = DateTime.UtcNow;
+
+        RaiseDomainEvent(new PatientDataAnonymizedEvent(Id, policyId));
     }
 
     /// <summary>

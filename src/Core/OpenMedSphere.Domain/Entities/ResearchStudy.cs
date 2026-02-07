@@ -1,3 +1,4 @@
+using OpenMedSphere.Domain.Events;
 using OpenMedSphere.Domain.Primitives;
 using OpenMedSphere.Domain.ValueObjects;
 
@@ -9,6 +10,8 @@ namespace OpenMedSphere.Domain.Entities;
 /// </summary>
 public sealed class ResearchStudy : AggregateRoot<Guid>
 {
+    private readonly List<Guid> _patientDataIds = [];
+
     /// <summary>
     /// Gets the unique study code.
     /// </summary>
@@ -47,7 +50,7 @@ public sealed class ResearchStudy : AggregateRoot<Guid>
     /// <summary>
     /// Gets the list of patient data IDs included in this study.
     /// </summary>
-    public List<Guid> PatientDataIds { get; init; } = [];
+    public IReadOnlyCollection<Guid> PatientDataIds => _patientDataIds.AsReadOnly();
 
     /// <summary>
     /// Gets the maximum number of participants allowed in the study.
@@ -57,7 +60,7 @@ public sealed class ResearchStudy : AggregateRoot<Guid>
     /// <summary>
     /// Gets the current number of participants in the study.
     /// </summary>
-    public int CurrentParticipantCount => PatientDataIds.Count;
+    public int CurrentParticipantCount => _patientDataIds.Count;
 
     /// <summary>
     /// Gets the research area or field of study.
@@ -122,7 +125,7 @@ public sealed class ResearchStudy : AggregateRoot<Guid>
         ArgumentException.ThrowIfNullOrWhiteSpace(institution);
         ArgumentNullException.ThrowIfNull(studyPeriod);
 
-        return new ResearchStudy(Guid.NewGuid())
+        ResearchStudy study = new(Guid.CreateVersion7())
         {
             Code = code,
             Title = title,
@@ -132,6 +135,10 @@ public sealed class ResearchStudy : AggregateRoot<Guid>
             AnonymizationPolicyId = anonymizationPolicyId,
             Description = description
         };
+
+        study.RaiseDomainEvent(new ResearchStudyCreatedEvent(study.Id, code.Value));
+
+        return study;
     }
 
     /// <summary>
@@ -206,9 +213,9 @@ public sealed class ResearchStudy : AggregateRoot<Guid>
             throw new InvalidOperationException("Study has reached maximum number of participants.");
         }
 
-        if (!PatientDataIds.Contains(patientDataId))
+        if (!_patientDataIds.Contains(patientDataId))
         {
-            PatientDataIds.Add(patientDataId);
+            _patientDataIds.Add(patientDataId);
             UpdatedAtUtc = DateTime.UtcNow;
         }
     }
@@ -219,7 +226,7 @@ public sealed class ResearchStudy : AggregateRoot<Guid>
     /// <param name="patientDataId">The ID of the patient data to remove.</param>
     public void RemovePatientData(Guid patientDataId)
     {
-        if (PatientDataIds.Remove(patientDataId))
+        if (_patientDataIds.Remove(patientDataId))
         {
             UpdatedAtUtc = DateTime.UtcNow;
         }
