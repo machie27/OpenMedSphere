@@ -66,9 +66,17 @@ public static class ResearchStudyEndpoints
     {
         Result<Guid> result = await mediator.SendAsync<Guid>(command, cancellationToken);
 
-        return result.IsSuccess
-            ? Results.Created($"/api/research-studies/{result.Value}", result.Value)
-            : Results.BadRequest(result.Error);
+        if (result.IsSuccess)
+        {
+            return Results.Created($"/api/research-studies/{result.Value}", result.Value);
+        }
+
+        return result.ErrorCode switch
+        {
+            ErrorCode.NotFound => Results.NotFound(result.Error),
+            ErrorCode.Conflict => Results.Conflict(result.Error),
+            _ => Results.BadRequest(result.Error)
+        };
     }
 }
 

@@ -44,7 +44,7 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     {
         if (_currentTransaction is null)
         {
-            return;
+            throw new InvalidOperationException("No active transaction to commit. Call BeginTransactionAsync first.");
         }
 
         try
@@ -63,7 +63,7 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     {
         if (_currentTransaction is null)
         {
-            return;
+            throw new InvalidOperationException("No active transaction to roll back. Call BeginTransactionAsync first.");
         }
 
         try
@@ -75,6 +75,18 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
             await _currentTransaction.DisposeAsync();
             _currentTransaction = null;
         }
+    }
+
+    /// <inheritdoc />
+    public override async ValueTask DisposeAsync()
+    {
+        if (_currentTransaction is not null)
+        {
+            await _currentTransaction.DisposeAsync();
+            _currentTransaction = null;
+        }
+
+        await base.DisposeAsync();
     }
 
     /// <inheritdoc />

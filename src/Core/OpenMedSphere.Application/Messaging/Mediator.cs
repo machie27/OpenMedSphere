@@ -86,7 +86,7 @@ internal sealed partial class Mediator(
         Result? validationFailure = await ValidateAsync(commandType, command, cancellationToken);
         if (validationFailure is not null)
         {
-            return Result<TResponse>.Failure(validationFailure.Error!);
+            return Result<TResponse>.ValidationFailed(validationFailure.Error!);
         }
 
         (Type handlerType, MethodInfo handleMethod) = CommandWithResponseHandlerCache.GetOrAdd(commandType, type =>
@@ -142,7 +142,7 @@ internal sealed partial class Mediator(
         Result? validationFailure = await ValidateAsync(queryType, query, cancellationToken);
         if (validationFailure is not null)
         {
-            return Result<TResponse>.Failure(validationFailure.Error!);
+            return Result<TResponse>.ValidationFailed(validationFailure.Error!);
         }
 
         (Type handlerType, MethodInfo handleMethod) = QueryHandlerCache.GetOrAdd(queryType, type =>

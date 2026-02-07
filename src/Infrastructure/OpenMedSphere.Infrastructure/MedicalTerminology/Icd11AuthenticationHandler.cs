@@ -101,11 +101,10 @@ internal sealed class Icd11AuthenticationHandler(
     /// <summary>
     /// Asynchronously disposes the handler and its resources.
     /// </summary>
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
-        _semaphore.Dispose();
-        Dispose(false);
+        Dispose(true);
         GC.SuppressFinalize(this);
-        await ValueTask.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 }

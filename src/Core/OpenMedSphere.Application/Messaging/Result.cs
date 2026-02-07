@@ -155,4 +155,11 @@ public sealed class Result<T> : Result
     /// <param name="error">The error message.</param>
     /// <returns>An invalid-operation failure result.</returns>
     public new static Result<T> InvalidOperation(string error) => new(error, ErrorCode.InvalidOperation);
+
+    /// <summary>
+    /// Creates a validation-failed failure result.
+    /// </summary>
+    /// <param name="error">The error message.</param>
+    /// <returns>A validation-failed failure result.</returns>
+    public new static Result<T> ValidationFailed(string error) => new(error, ErrorCode.ValidationFailed);
 }
