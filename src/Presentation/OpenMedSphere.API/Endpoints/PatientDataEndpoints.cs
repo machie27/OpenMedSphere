@@ -61,7 +61,9 @@ public static class PatientDataEndpoints
 
         return result.IsSuccess
             ? Results.Ok(result.Value)
-            : Results.NotFound(result.Error);
+            : result.ErrorCode == ErrorCode.NotFound
+                ? Results.NotFound(result.Error)
+                : Results.BadRequest(result.Error);
     }
 
     private static async Task<IResult> SearchAsync(
@@ -117,7 +119,7 @@ public static class PatientDataEndpoints
 
         return result.IsSuccess
             ? Results.NoContent()
-            : result.Error?.Contains("not found", StringComparison.OrdinalIgnoreCase) == true
+            : result.ErrorCode == ErrorCode.NotFound
                 ? Results.NotFound(result.Error)
                 : Results.BadRequest(result.Error);
     }

@@ -66,10 +66,13 @@ app.MapDefaultEndpoints();
 
 if (app.Environment.IsDevelopment())
 {
-    await using (AsyncServiceScope scope = app.Services.CreateAsyncScope())
+    if (builder.Configuration.GetValue("Database:AutoMigrate", true))
     {
-        ApplicationDbContext dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        await dbContext.Database.MigrateAsync();
+        await using (AsyncServiceScope scope = app.Services.CreateAsyncScope())
+        {
+            ApplicationDbContext dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            await dbContext.Database.MigrateAsync();
+        }
     }
 
     app.MapOpenApi();

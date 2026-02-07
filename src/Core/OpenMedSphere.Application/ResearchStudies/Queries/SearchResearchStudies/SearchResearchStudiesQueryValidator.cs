@@ -8,30 +8,30 @@ namespace OpenMedSphere.Application.ResearchStudies.Queries.SearchResearchStudie
 internal sealed class SearchResearchStudiesQueryValidator : IValidator<SearchResearchStudiesQuery>
 {
     /// <inheritdoc />
-    public ValidationResult Validate(SearchResearchStudiesQuery instance)
+    public Task<ValidationResult> ValidateAsync(SearchResearchStudiesQuery instance, CancellationToken cancellationToken = default)
     {
         List<ValidationError> errors = [];
 
-        if (instance.ResearchArea is not null && instance.ResearchArea.Length > 200)
+        if (instance.ResearchArea is not null && instance.ResearchArea.Length > ValidationConstants.MaxResearchAreaLength)
         {
-            errors.Add(new ValidationError(nameof(instance.ResearchArea), "Research area must not exceed 200 characters."));
+            errors.Add(new ValidationError(nameof(instance.ResearchArea), $"Research area must not exceed {ValidationConstants.MaxResearchAreaLength} characters."));
         }
 
-        if (instance.TitleSearch is not null && instance.TitleSearch.Length > 200)
+        if (instance.TitleSearch is not null && instance.TitleSearch.Length > ValidationConstants.MaxSearchTextLength)
         {
-            errors.Add(new ValidationError(nameof(instance.TitleSearch), "Title search must not exceed 200 characters."));
+            errors.Add(new ValidationError(nameof(instance.TitleSearch), $"Title search must not exceed {ValidationConstants.MaxSearchTextLength} characters."));
         }
 
-        if (instance.Page < 1)
+        if (instance.Page < ValidationConstants.MinPage)
         {
-            errors.Add(new ValidationError(nameof(instance.Page), "Page must be at least 1."));
+            errors.Add(new ValidationError(nameof(instance.Page), $"Page must be at least {ValidationConstants.MinPage}."));
         }
 
-        if (instance.PageSize < 1 || instance.PageSize > 100)
+        if (instance.PageSize < 1 || instance.PageSize > ValidationConstants.MaxPageSize)
         {
-            errors.Add(new ValidationError(nameof(instance.PageSize), "Page size must be between 1 and 100."));
+            errors.Add(new ValidationError(nameof(instance.PageSize), $"Page size must be between 1 and {ValidationConstants.MaxPageSize}."));
         }
 
-        return errors.Count == 0 ? ValidationResult.Success() : new ValidationResult { Errors = errors };
+        return Task.FromResult(errors.Count == 0 ? ValidationResult.Success() : new ValidationResult { Errors = errors });
     }
 }

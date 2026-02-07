@@ -48,6 +48,7 @@ internal sealed class ResearchStudyConfiguration : IEntityTypeConfiguration<Rese
             .HasColumnName("PatientDataIds")
             .HasColumnType("jsonb");
 
+        builder.HasIndex(r => r.AnonymizationPolicyId);
         builder.HasIndex(r => r.ResearchArea);
         builder.HasIndex(r => r.IsActive);
         builder.HasIndex("StudyCode").IsUnique().HasDatabaseName("IX_ResearchStudies_StudyCode");

@@ -42,7 +42,7 @@ public static class DependencyInjection
                 "Ensure your configuration includes a valid database connection string.");
         }
 
-        services.AddSingleton<AuditSaveChangesInterceptor>();
+        services.AddScoped<AuditSaveChangesInterceptor>();
 
         services.AddDbContext<ApplicationDbContext>((sp, options) =>
         {

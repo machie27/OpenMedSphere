@@ -7,9 +7,10 @@ namespace OpenMedSphere.Application.Messaging;
 public interface IValidator<in T>
 {
     /// <summary>
-    /// Validates the specified instance.
+    /// Validates the specified instance asynchronously.
     /// </summary>
     /// <param name="instance">The instance to validate.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The validation result.</returns>
-    ValidationResult Validate(T instance);
+    Task<ValidationResult> ValidateAsync(T instance, CancellationToken cancellationToken = default);
 }

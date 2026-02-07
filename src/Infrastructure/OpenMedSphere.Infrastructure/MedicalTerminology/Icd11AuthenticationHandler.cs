@@ -10,7 +10,7 @@ namespace OpenMedSphere.Infrastructure.MedicalTerminology;
 /// </summary>
 internal sealed class Icd11AuthenticationHandler(
     IOptions<Icd11ApiOptions> options,
-    IHttpClientFactory httpClientFactory) : DelegatingHandler
+    IHttpClientFactory httpClientFactory) : DelegatingHandler, IAsyncDisposable
 {
     private readonly Icd11ApiOptions _options = options.Value;
     private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
@@ -96,5 +96,16 @@ internal sealed class Icd11AuthenticationHandler(
         }
 
         base.Dispose(disposing);
+    }
+
+    /// <summary>
+    /// Asynchronously disposes the handler and its resources.
+    /// </summary>
+    public async ValueTask DisposeAsync()
+    {
+        _semaphore.Dispose();
+        Dispose(false);
+        GC.SuppressFinalize(this);
+        await ValueTask.CompletedTask;
     }
 }

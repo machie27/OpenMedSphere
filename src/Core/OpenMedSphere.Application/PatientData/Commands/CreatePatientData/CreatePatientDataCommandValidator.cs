@@ -8,15 +8,15 @@ namespace OpenMedSphere.Application.PatientData.Commands.CreatePatientData;
 internal sealed class CreatePatientDataCommandValidator : IValidator<CreatePatientDataCommand>
 {
     /// <inheritdoc />
-    public ValidationResult Validate(CreatePatientDataCommand instance)
+    public Task<ValidationResult> ValidateAsync(CreatePatientDataCommand instance, CancellationToken cancellationToken = default)
     {
         List<ValidationError> errors = [];
 
         if (instance.YearOfBirth.HasValue)
         {
-            if (instance.YearOfBirth.Value < 1900)
+            if (instance.YearOfBirth.Value < ValidationConstants.MinYearOfBirth)
             {
-                errors.Add(new ValidationError(nameof(instance.YearOfBirth), "Year of birth must be 1900 or later."));
+                errors.Add(new ValidationError(nameof(instance.YearOfBirth), $"Year of birth must be {ValidationConstants.MinYearOfBirth} or later."));
             }
             else if (instance.YearOfBirth.Value > DateTime.UtcNow.Year)
             {
@@ -24,41 +24,41 @@ internal sealed class CreatePatientDataCommandValidator : IValidator<CreatePatie
             }
         }
 
-        if (instance.Gender is not null && instance.Gender.Length > 50)
+        if (instance.Gender is not null && instance.Gender.Length > ValidationConstants.MaxGenderLength)
         {
-            errors.Add(new ValidationError(nameof(instance.Gender), "Gender must not exceed 50 characters."));
+            errors.Add(new ValidationError(nameof(instance.Gender), $"Gender must not exceed {ValidationConstants.MaxGenderLength} characters."));
         }
 
-        if (instance.Region is not null && instance.Region.Length > 200)
+        if (instance.Region is not null && instance.Region.Length > ValidationConstants.MaxRegionLength)
         {
-            errors.Add(new ValidationError(nameof(instance.Region), "Region must not exceed 200 characters."));
+            errors.Add(new ValidationError(nameof(instance.Region), $"Region must not exceed {ValidationConstants.MaxRegionLength} characters."));
         }
 
-        if (instance.PrimaryDiagnosis is not null && instance.PrimaryDiagnosis.Length > 500)
+        if (instance.PrimaryDiagnosis is not null && instance.PrimaryDiagnosis.Length > ValidationConstants.MaxDiagnosisLength)
         {
-            errors.Add(new ValidationError(nameof(instance.PrimaryDiagnosis), "Primary diagnosis must not exceed 500 characters."));
+            errors.Add(new ValidationError(nameof(instance.PrimaryDiagnosis), $"Primary diagnosis must not exceed {ValidationConstants.MaxDiagnosisLength} characters."));
         }
 
-        if (instance.PrimaryDiagnosisIcdCode is not null && instance.PrimaryDiagnosisIcdCode.Length > 50)
+        if (instance.PrimaryDiagnosisIcdCode is not null && instance.PrimaryDiagnosisIcdCode.Length > ValidationConstants.MaxIcdCodeLength)
         {
-            errors.Add(new ValidationError(nameof(instance.PrimaryDiagnosisIcdCode), "ICD code must not exceed 50 characters."));
+            errors.Add(new ValidationError(nameof(instance.PrimaryDiagnosisIcdCode), $"ICD code must not exceed {ValidationConstants.MaxIcdCodeLength} characters."));
         }
 
-        if (instance.ClinicalNotes is not null && instance.ClinicalNotes.Length > 10000)
+        if (instance.ClinicalNotes is not null && instance.ClinicalNotes.Length > ValidationConstants.MaxNotesLength)
         {
-            errors.Add(new ValidationError(nameof(instance.ClinicalNotes), "Clinical notes must not exceed 10000 characters."));
+            errors.Add(new ValidationError(nameof(instance.ClinicalNotes), $"Clinical notes must not exceed {ValidationConstants.MaxNotesLength} characters."));
         }
 
-        if (instance.SecondaryDiagnoses is not null && instance.SecondaryDiagnoses.Count > 50)
+        if (instance.SecondaryDiagnoses is not null && instance.SecondaryDiagnoses.Count > ValidationConstants.MaxSecondaryDiagnoses)
         {
-            errors.Add(new ValidationError(nameof(instance.SecondaryDiagnoses), "Secondary diagnoses list must not exceed 50 items."));
+            errors.Add(new ValidationError(nameof(instance.SecondaryDiagnoses), $"Secondary diagnoses list must not exceed {ValidationConstants.MaxSecondaryDiagnoses} items."));
         }
 
-        if (instance.Medications is not null && instance.Medications.Count > 100)
+        if (instance.Medications is not null && instance.Medications.Count > ValidationConstants.MaxMedications)
         {
-            errors.Add(new ValidationError(nameof(instance.Medications), "Medications list must not exceed 100 items."));
+            errors.Add(new ValidationError(nameof(instance.Medications), $"Medications list must not exceed {ValidationConstants.MaxMedications} items."));
         }
 
-        return errors.Count == 0 ? ValidationResult.Success() : new ValidationResult { Errors = errors };
+        return Task.FromResult(errors.Count == 0 ? ValidationResult.Success() : new ValidationResult { Errors = errors });
     }
 }

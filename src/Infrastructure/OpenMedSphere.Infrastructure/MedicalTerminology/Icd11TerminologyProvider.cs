@@ -17,8 +17,6 @@ internal sealed partial class Icd11TerminologyProvider(
     IOptions<Icd11ApiOptions> options,
     ILogger<Icd11TerminologyProvider> logger) : IMedicalTerminologyProvider
 {
-    private const string ReleaseId = "2025-01";
-
     private readonly Icd11ApiOptions _options = options.Value;
 
     /// <summary>
@@ -49,7 +47,7 @@ internal sealed partial class Icd11TerminologyProvider(
             {
                 LogSearchApiCall(searchText);
 
-                var url = $"/icd/release/11/{ReleaseId}/mms/search?q={Uri.EscapeDataString(searchText)}" +
+                var url = $"/icd/release/11/{_options.ReleaseId}/mms/search?q={Uri.EscapeDataString(searchText)}" +
                           $"&subtreeFilterUsesFoundationDescendants=false&includeKeywordResult=false" +
                           $"&useFlexisearch=false&flatResults=true" +
                           $"&highlightingEnabled=false&medicalCodingMode=true";
@@ -106,7 +104,7 @@ internal sealed partial class Icd11TerminologyProvider(
             {
                 LogCodeLookupApiCall(code);
 
-                var url = $"/icd/release/11/{ReleaseId}/mms/codeinfo/{Uri.EscapeDataString(code)}" +
+                var url = $"/icd/release/11/{_options.ReleaseId}/mms/codeinfo/{Uri.EscapeDataString(code)}" +
                           $"?flexiblemode=false";
 
                 httpClient.DefaultRequestHeaders.Remove("Accept-Language");

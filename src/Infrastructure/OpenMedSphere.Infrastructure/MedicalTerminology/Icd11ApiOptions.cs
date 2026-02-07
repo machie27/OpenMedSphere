@@ -36,6 +36,11 @@ public sealed class Icd11ApiOptions
     public string Language { get; set; } = "en";
 
     /// <summary>
+    /// Gets or sets the ICD-11 release identifier (e.g. "2025-01").
+    /// </summary>
+    public string ReleaseId { get; set; } = "2025-01";
+
+    /// <summary>
     /// Gets or sets the cache duration in minutes.
     /// </summary>
     public int CacheDurationMinutes { get; set; } = 60;

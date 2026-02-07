@@ -27,7 +27,7 @@ internal sealed partial class Mediator(
         string commandName = commandType.Name;
         LogCommandDispatching(commandName);
 
-        Result? validationFailure = await ValidateAsync(commandType, command);
+        Result? validationFailure = await ValidateAsync(commandType, command, cancellationToken);
         if (validationFailure is not null)
         {
             return validationFailure;
@@ -83,7 +83,7 @@ internal sealed partial class Mediator(
         string commandName = commandType.Name;
         LogCommandWithResponseDispatching(commandName, typeof(TResponse).Name);
 
-        Result? validationFailure = await ValidateAsync(commandType, command);
+        Result? validationFailure = await ValidateAsync(commandType, command, cancellationToken);
         if (validationFailure is not null)
         {
             return Result<TResponse>.Failure(validationFailure.Error!);
@@ -139,7 +139,7 @@ internal sealed partial class Mediator(
         string queryName = queryType.Name;
         LogQueryDispatching(queryName, typeof(TResponse).Name);
 
-        Result? validationFailure = await ValidateAsync(queryType, query);
+        Result? validationFailure = await ValidateAsync(queryType, query, cancellationToken);
         if (validationFailure is not null)
         {
             return Result<TResponse>.Failure(validationFailure.Error!);
@@ -186,13 +186,13 @@ internal sealed partial class Mediator(
         }
     }
 
-    private async Task<Result?> ValidateAsync<T>(Type messageType, T message)
+    private async Task<Result?> ValidateAsync<T>(Type messageType, T message, CancellationToken cancellationToken = default)
     {
         var (validatorType, validateMethod) = ValidatorCache.GetOrAdd(messageType, static type =>
         {
             var vt = typeof(IValidator<>).MakeGenericType(type);
-            var vm = vt.GetMethod(nameof(IValidator<object>.Validate))
-                ?? throw new InvalidOperationException($"IValidator<{type.Name}> does not have a Validate method.");
+            var vm = vt.GetMethod(nameof(IValidator<object>.ValidateAsync))
+                ?? throw new InvalidOperationException($"IValidator<{type.Name}> does not have a ValidateAsync method.");
             return (vt, vm);
         });
 
@@ -202,8 +202,10 @@ internal sealed partial class Mediator(
             return null;
         }
 
-        object validationResultObj = validateMethod.Invoke(validator, [message])!;
-        ValidationResult validationResult = (ValidationResult)validationResultObj;
+        object? resultObj = validateMethod.Invoke(validator, [message, cancellationToken]);
+        ValidationResult validationResult = resultObj is Task<ValidationResult> task
+            ? await task.ConfigureAwait(false)
+            : throw new InvalidOperationException($"Validator for {messageType.Name} returned an unexpected type.");
 
         if (validationResult.IsValid)
         {
@@ -211,7 +213,7 @@ internal sealed partial class Mediator(
         }
 
         string errorMessage = string.Join("; ", validationResult.Errors.Select(e => $"{e.PropertyName}: {e.ErrorMessage}"));
-        return Result.Failure(errorMessage);
+        return Result.ValidationFailed(errorMessage);
     }
 
     [LoggerMessage(EventId = 1000, Level = LogLevel.Debug, Message = "Dispatching command {CommandName}")]

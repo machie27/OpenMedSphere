@@ -23,12 +23,12 @@ internal sealed class AnonymizePatientDataCommandHandler(
 
         if (patientData is null)
         {
-            return Result.Failure($"Patient data with ID '{command.PatientDataId}' not found.");
+            return Result.NotFound($"Patient data with ID '{command.PatientDataId}' not found.");
         }
 
         if (patientData.IsAnonymized)
         {
-            return Result.Failure("Patient data is already anonymized.");
+            return Result.InvalidOperation("Patient data is already anonymized.");
         }
 
         AnonymizationPolicy? policy =
@@ -36,12 +36,12 @@ internal sealed class AnonymizePatientDataCommandHandler(
 
         if (policy is null)
         {
-            return Result.Failure($"Anonymization policy with ID '{command.PolicyId}' not found.");
+            return Result.NotFound($"Anonymization policy with ID '{command.PolicyId}' not found.");
         }
 
         if (!policy.IsActive)
         {
-            return Result.Failure("Cannot use an inactive anonymization policy.");
+            return Result.InvalidOperation("Cannot use an inactive anonymization policy.");
         }
 
         patientData.MarkAsAnonymized(command.PolicyId);

@@ -8,33 +8,33 @@ namespace OpenMedSphere.Application.PatientData.Queries.SearchPatientData;
 internal sealed class SearchPatientDataQueryValidator : IValidator<SearchPatientDataQuery>
 {
     /// <inheritdoc />
-    public ValidationResult Validate(SearchPatientDataQuery instance)
+    public Task<ValidationResult> ValidateAsync(SearchPatientDataQuery instance, CancellationToken cancellationToken = default)
     {
         List<ValidationError> errors = [];
 
-        if (instance.DiagnosisText is not null && instance.DiagnosisText.Length > 200)
+        if (instance.DiagnosisText is not null && instance.DiagnosisText.Length > ValidationConstants.MaxSearchTextLength)
         {
-            errors.Add(new ValidationError(nameof(instance.DiagnosisText), "Diagnosis text must not exceed 200 characters."));
+            errors.Add(new ValidationError(nameof(instance.DiagnosisText), $"Diagnosis text must not exceed {ValidationConstants.MaxSearchTextLength} characters."));
         }
 
-        if (instance.IcdCode is not null && instance.IcdCode.Length > 50)
+        if (instance.IcdCode is not null && instance.IcdCode.Length > ValidationConstants.MaxIcdCodeLength)
         {
-            errors.Add(new ValidationError(nameof(instance.IcdCode), "ICD code must not exceed 50 characters."));
+            errors.Add(new ValidationError(nameof(instance.IcdCode), $"ICD code must not exceed {ValidationConstants.MaxIcdCodeLength} characters."));
         }
 
-        if (instance.Region is not null && instance.Region.Length > 200)
+        if (instance.Region is not null && instance.Region.Length > ValidationConstants.MaxRegionLength)
         {
-            errors.Add(new ValidationError(nameof(instance.Region), "Region must not exceed 200 characters."));
+            errors.Add(new ValidationError(nameof(instance.Region), $"Region must not exceed {ValidationConstants.MaxRegionLength} characters."));
         }
 
-        if (instance.Page < 1)
+        if (instance.Page < ValidationConstants.MinPage)
         {
-            errors.Add(new ValidationError(nameof(instance.Page), "Page must be at least 1."));
+            errors.Add(new ValidationError(nameof(instance.Page), $"Page must be at least {ValidationConstants.MinPage}."));
         }
 
-        if (instance.PageSize < 1 || instance.PageSize > 100)
+        if (instance.PageSize < 1 || instance.PageSize > ValidationConstants.MaxPageSize)
         {
-            errors.Add(new ValidationError(nameof(instance.PageSize), "Page size must be between 1 and 100."));
+            errors.Add(new ValidationError(nameof(instance.PageSize), $"Page size must be between 1 and {ValidationConstants.MaxPageSize}."));
         }
 
         if (instance.CollectedAfter.HasValue && instance.CollectedBefore.HasValue &&
@@ -43,6 +43,6 @@ internal sealed class SearchPatientDataQueryValidator : IValidator<SearchPatient
             errors.Add(new ValidationError(nameof(instance.CollectedBefore), "CollectedBefore must be on or after CollectedAfter."));
         }
 
-        return errors.Count == 0 ? ValidationResult.Success() : new ValidationResult { Errors = errors };
+        return Task.FromResult(errors.Count == 0 ? ValidationResult.Success() : new ValidationResult { Errors = errors });
     }
 }

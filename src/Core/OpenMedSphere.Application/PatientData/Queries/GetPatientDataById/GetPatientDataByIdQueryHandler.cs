@@ -20,7 +20,7 @@ internal sealed class GetPatientDataByIdQueryHandler(IPatientDataRepository repo
 
         if (patientData is null)
         {
-            return Result<PatientDataResponse>.Failure($"Patient data with ID '{query.Id}' not found.");
+            return Result<PatientDataResponse>.NotFound($"Patient data with ID '{query.Id}' not found.");
         }
 
         PatientDataResponse response = new()

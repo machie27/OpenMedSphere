@@ -9,7 +9,7 @@ namespace OpenMedSphere.Application.AnonymizationPolicies.Commands.CreatePolicy;
 internal sealed class CreateAnonymizationPolicyCommandValidator : IValidator<CreateAnonymizationPolicyCommand>
 {
     /// <inheritdoc />
-    public ValidationResult Validate(CreateAnonymizationPolicyCommand instance)
+    public Task<ValidationResult> ValidateAsync(CreateAnonymizationPolicyCommand instance, CancellationToken cancellationToken = default)
     {
         List<ValidationError> errors = [];
 
@@ -17,14 +17,14 @@ internal sealed class CreateAnonymizationPolicyCommandValidator : IValidator<Cre
         {
             errors.Add(new ValidationError(nameof(instance.Name), "Name is required."));
         }
-        else if (instance.Name.Length > 200)
+        else if (instance.Name.Length > ValidationConstants.MaxPolicyNameLength)
         {
-            errors.Add(new ValidationError(nameof(instance.Name), "Name must not exceed 200 characters."));
+            errors.Add(new ValidationError(nameof(instance.Name), $"Name must not exceed {ValidationConstants.MaxPolicyNameLength} characters."));
         }
 
-        if (instance.Description is not null && instance.Description.Length > 2000)
+        if (instance.Description is not null && instance.Description.Length > ValidationConstants.MaxPolicyDescriptionLength)
         {
-            errors.Add(new ValidationError(nameof(instance.Description), "Description must not exceed 2000 characters."));
+            errors.Add(new ValidationError(nameof(instance.Description), $"Description must not exceed {ValidationConstants.MaxPolicyDescriptionLength} characters."));
         }
 
         if (!Enum.IsDefined(instance.Level))
@@ -32,6 +32,6 @@ internal sealed class CreateAnonymizationPolicyCommandValidator : IValidator<Cre
             errors.Add(new ValidationError(nameof(instance.Level), "Invalid anonymization level."));
         }
 
-        return errors.Count == 0 ? ValidationResult.Success() : new ValidationResult { Errors = errors };
+        return Task.FromResult(errors.Count == 0 ? ValidationResult.Success() : new ValidationResult { Errors = errors });
     }
 }

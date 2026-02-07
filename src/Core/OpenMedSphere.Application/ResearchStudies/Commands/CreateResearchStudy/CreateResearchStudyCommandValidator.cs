@@ -8,7 +8,7 @@ namespace OpenMedSphere.Application.ResearchStudies.Commands.CreateResearchStudy
 internal sealed class CreateResearchStudyCommandValidator : IValidator<CreateResearchStudyCommand>
 {
     /// <inheritdoc />
-    public ValidationResult Validate(CreateResearchStudyCommand instance)
+    public Task<ValidationResult> ValidateAsync(CreateResearchStudyCommand instance, CancellationToken cancellationToken = default)
     {
         List<ValidationError> errors = [];
 
@@ -16,41 +16,41 @@ internal sealed class CreateResearchStudyCommandValidator : IValidator<CreateRes
         {
             errors.Add(new ValidationError(nameof(instance.StudyCode), "Study code is required."));
         }
-        else if (instance.StudyCode.Length > 50)
+        else if (instance.StudyCode.Length > ValidationConstants.MaxStudyCodeLength)
         {
-            errors.Add(new ValidationError(nameof(instance.StudyCode), "Study code must not exceed 50 characters."));
+            errors.Add(new ValidationError(nameof(instance.StudyCode), $"Study code must not exceed {ValidationConstants.MaxStudyCodeLength} characters."));
         }
 
         if (string.IsNullOrWhiteSpace(instance.Title))
         {
             errors.Add(new ValidationError(nameof(instance.Title), "Title is required."));
         }
-        else if (instance.Title.Length > 500)
+        else if (instance.Title.Length > ValidationConstants.MaxTitleLength)
         {
-            errors.Add(new ValidationError(nameof(instance.Title), "Title must not exceed 500 characters."));
+            errors.Add(new ValidationError(nameof(instance.Title), $"Title must not exceed {ValidationConstants.MaxTitleLength} characters."));
         }
 
         if (string.IsNullOrWhiteSpace(instance.PrincipalInvestigator))
         {
             errors.Add(new ValidationError(nameof(instance.PrincipalInvestigator), "Principal investigator is required."));
         }
-        else if (instance.PrincipalInvestigator.Length > 200)
+        else if (instance.PrincipalInvestigator.Length > ValidationConstants.MaxInvestigatorLength)
         {
-            errors.Add(new ValidationError(nameof(instance.PrincipalInvestigator), "Principal investigator must not exceed 200 characters."));
+            errors.Add(new ValidationError(nameof(instance.PrincipalInvestigator), $"Principal investigator must not exceed {ValidationConstants.MaxInvestigatorLength} characters."));
         }
 
         if (string.IsNullOrWhiteSpace(instance.Institution))
         {
             errors.Add(new ValidationError(nameof(instance.Institution), "Institution is required."));
         }
-        else if (instance.Institution.Length > 300)
+        else if (instance.Institution.Length > ValidationConstants.MaxInstitutionLength)
         {
-            errors.Add(new ValidationError(nameof(instance.Institution), "Institution must not exceed 300 characters."));
+            errors.Add(new ValidationError(nameof(instance.Institution), $"Institution must not exceed {ValidationConstants.MaxInstitutionLength} characters."));
         }
 
-        if (instance.Description is not null && instance.Description.Length > 5000)
+        if (instance.Description is not null && instance.Description.Length > ValidationConstants.MaxDescriptionLength)
         {
-            errors.Add(new ValidationError(nameof(instance.Description), "Description must not exceed 5000 characters."));
+            errors.Add(new ValidationError(nameof(instance.Description), $"Description must not exceed {ValidationConstants.MaxDescriptionLength} characters."));
         }
 
         if (instance.StudyPeriodEnd <= instance.StudyPeriodStart)
@@ -68,11 +68,11 @@ internal sealed class CreateResearchStudyCommandValidator : IValidator<CreateRes
             errors.Add(new ValidationError(nameof(instance.MaxParticipants), "Max participants must be greater than 0."));
         }
 
-        if (instance.ResearchArea is not null && instance.ResearchArea.Length > 200)
+        if (instance.ResearchArea is not null && instance.ResearchArea.Length > ValidationConstants.MaxResearchAreaLength)
         {
-            errors.Add(new ValidationError(nameof(instance.ResearchArea), "Research area must not exceed 200 characters."));
+            errors.Add(new ValidationError(nameof(instance.ResearchArea), $"Research area must not exceed {ValidationConstants.MaxResearchAreaLength} characters."));
         }
 
-        return errors.Count == 0 ? ValidationResult.Success() : new ValidationResult { Errors = errors };
+        return Task.FromResult(errors.Count == 0 ? ValidationResult.Success() : new ValidationResult { Errors = errors });
     }
 }

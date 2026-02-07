@@ -25,7 +25,8 @@ public static class MedicalTerminologyEndpoints
             .AddEndpointFilter(async (context, next) =>
             {
                 var user = context.HttpContext.User;
-                var userId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? "unknown";
+                var userId = (user.FindFirstValue(ClaimTypes.NameIdentifier) ?? "unknown")
+                    .Replace("\n", "").Replace("\r", "");
                 var logger = context.HttpContext.RequestServices
                     .GetRequiredService<ILoggerFactory>()
                     .CreateLogger(nameof(MedicalTerminologyEndpoints));

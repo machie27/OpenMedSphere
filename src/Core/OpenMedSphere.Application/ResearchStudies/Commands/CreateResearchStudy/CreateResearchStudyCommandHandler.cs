@@ -24,14 +24,14 @@ internal sealed class CreateResearchStudyCommandHandler(
 
         if (policy is null)
         {
-            return Result<Guid>.Failure(
+            return Result<Guid>.NotFound(
                 $"Anonymization policy with ID '{command.AnonymizationPolicyId}' not found.");
         }
 
         ResearchStudy? existing = await repository.GetByCodeAsync(command.StudyCode, cancellationToken);
         if (existing is not null)
         {
-            return Result<Guid>.Failure($"A study with code '{command.StudyCode}' already exists.");
+            return Result<Guid>.Conflict($"A study with code '{command.StudyCode}' already exists.");
         }
 
         StudyCode studyCode = StudyCode.Create(command.StudyCode);

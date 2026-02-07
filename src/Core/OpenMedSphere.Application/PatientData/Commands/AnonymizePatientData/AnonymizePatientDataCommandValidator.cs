@@ -8,7 +8,7 @@ namespace OpenMedSphere.Application.PatientData.Commands.AnonymizePatientData;
 internal sealed class AnonymizePatientDataCommandValidator : IValidator<AnonymizePatientDataCommand>
 {
     /// <inheritdoc />
-    public ValidationResult Validate(AnonymizePatientDataCommand instance)
+    public Task<ValidationResult> ValidateAsync(AnonymizePatientDataCommand instance, CancellationToken cancellationToken = default)
     {
         List<ValidationError> errors = [];
 
@@ -22,6 +22,6 @@ internal sealed class AnonymizePatientDataCommandValidator : IValidator<Anonymiz
             errors.Add(new ValidationError(nameof(instance.PolicyId), "Policy ID is required."));
         }
 
-        return errors.Count == 0 ? ValidationResult.Success() : new ValidationResult { Errors = errors };
+        return Task.FromResult(errors.Count == 0 ? ValidationResult.Success() : new ValidationResult { Errors = errors });
     }
 }
