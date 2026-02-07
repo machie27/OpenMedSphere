@@ -44,13 +44,13 @@ public static class DependencyInjection
 
         services.AddScoped<AuditSaveChangesInterceptor>();
 
-        var npgsqlDataSource = new Npgsql.NpgsqlDataSourceBuilder(connectionString)
+        services.AddSingleton(new Npgsql.NpgsqlDataSourceBuilder(connectionString)
             .EnableDynamicJson()
-            .Build();
+            .Build());
 
         services.AddDbContext<ApplicationDbContext>((sp, options) =>
         {
-            options.UseNpgsql(npgsqlDataSource);
+            options.UseNpgsql(sp.GetRequiredService<Npgsql.NpgsqlDataSource>());
             options.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>());
         });
 

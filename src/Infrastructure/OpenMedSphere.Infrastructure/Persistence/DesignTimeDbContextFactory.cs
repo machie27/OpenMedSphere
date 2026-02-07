@@ -10,8 +10,12 @@ internal sealed class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<A
 {
     public ApplicationDbContext CreateDbContext(string[] args)
     {
+        var dataSource = new Npgsql.NpgsqlDataSourceBuilder("Host=localhost;Database=openmedsphere-designtime")
+            .EnableDynamicJson()
+            .Build();
+
         var optionsBuilder = new DbContextOptionsBuilder<ApplicationDbContext>();
-        optionsBuilder.UseNpgsql("Host=localhost;Database=openmedsphere-designtime");
+        optionsBuilder.UseNpgsql(dataSource);
 
         return new ApplicationDbContext(optionsBuilder.Options);
     }
