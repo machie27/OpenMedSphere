@@ -19,8 +19,6 @@ internal static class ValidationConstants
     public const int MaxInstitutionLength = 300;
     public const int MaxDescriptionLength = 5000;
     public const int MaxResearchAreaLength = 200;
-    public const int MaxPolicyNameLength = 200;
-    public const int MaxPolicyDescriptionLength = 2000;
     public const int MaxSearchTextLength = 200;
     public const int MinPage = 1;
     public const int MaxPageSize = 100;

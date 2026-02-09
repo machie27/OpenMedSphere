@@ -1,4 +1,3 @@
-using OpenMedSphere.Application.AnonymizationPolicies.Commands.CreatePolicy;
 using OpenMedSphere.Application.AnonymizationPolicies.Queries.GetAllPolicies;
 using OpenMedSphere.Application.Messaging;
 
@@ -25,12 +24,6 @@ public static class AnonymizationPolicyEndpoints
             .Produces<IReadOnlyList<AnonymizationPolicyResponse>>()
             .RequireRateLimiting("fixed");
 
-        group.MapPost("/", CreateAsync)
-            .WithName("CreateAnonymizationPolicy")
-            .Produces<Guid>(StatusCodes.Status201Created)
-            .Produces(StatusCodes.Status400BadRequest)
-            .RequireRateLimiting("write");
-
         return app;
     }
 
@@ -45,18 +38,6 @@ public static class AnonymizationPolicyEndpoints
 
         return result.IsSuccess
             ? Results.Ok(result.Value)
-            : Results.BadRequest(result.Error);
-    }
-
-    private static async Task<IResult> CreateAsync(
-        CreateAnonymizationPolicyCommand command,
-        IMediator mediator,
-        CancellationToken cancellationToken)
-    {
-        Result<Guid> result = await mediator.SendAsync<Guid>(command, cancellationToken);
-
-        return result.IsSuccess
-            ? Results.Created($"/api/anonymization-policies/{result.Value}", result.Value)
             : Results.BadRequest(result.Error);
     }
 }
