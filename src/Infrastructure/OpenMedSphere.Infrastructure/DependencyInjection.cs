@@ -59,6 +59,8 @@ public static class DependencyInjection
         services.AddScoped<IPatientDataRepository, PatientDataRepository>();
         services.AddScoped<IResearchStudyRepository, ResearchStudyRepository>();
         services.AddScoped<IAnonymizationPolicyRepository, AnonymizationPolicyRepository>();
+        services.AddScoped<IResearcherRepository, ResearcherRepository>();
+        services.AddScoped<IDataShareRepository, DataShareRepository>();
     }
 
     private static void AddMedicalTerminology(IServiceCollection services, IConfiguration configuration)

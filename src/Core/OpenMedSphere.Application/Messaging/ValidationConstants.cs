@@ -22,4 +22,11 @@ internal static class ValidationConstants
     public const int MaxSearchTextLength = 200;
     public const int MinPage = 1;
     public const int MaxPageSize = 100;
+
+    public const int MaxNameLength = 200;
+    public const int MaxEmailLength = 320;
+    public const int MaxBase64KeyLength = 10000;
+    public const int MaxEncryptedPayloadLength = 50_000_000;
+    public const int MaxEncapsulatedKeyLength = 10000;
+    public const int MaxSignatureLength = 20000;
 }
