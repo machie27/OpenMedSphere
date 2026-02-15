@@ -29,6 +29,16 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<AnonymizationPolicy> AnonymizationPolicies => Set<AnonymizationPolicy>();
 
     /// <summary>
+    /// Gets the researchers set.
+    /// </summary>
+    public DbSet<Researcher> Researchers => Set<Researcher>();
+
+    /// <summary>
+    /// Gets the data shares set.
+    /// </summary>
+    public DbSet<DataShare> DataShares => Set<DataShare>();
+
+    /// <summary>
     /// Gets the audit log entries set.
     /// </summary>
     public DbSet<AuditLogEntry> AuditLog => Set<AuditLogEntry>();

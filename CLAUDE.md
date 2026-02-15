@@ -9,7 +9,7 @@ OpenMedSphere is a secure medical research collaboration platform built with .NE
 **Key Goals:**
 - Secure processing and sharing of anonymized patient data
 - HIPAA and GDPR compliance
-- OpenPGP with quantum-safe encryption (CRYSTALS-Kyber, Falcon) - planned but not yet implemented
+- Hybrid quantum-safe encryption (ML-KEM-768 + X25519, ML-DSA-65 + ECDSA, AES-256-GCM) for E2E encrypted data sharing
 - Self-hostable architecture using .NET Aspire
 - Licensed under AGPL v3
 
@@ -21,7 +21,7 @@ The project follows **Clean Architecture** and **Domain-Driven Design (DDD)** pr
 ```
 src/
 ├── Core/
-│   ├── OpenMedSphere.Domain/          # Core business entities (PatientData, ResearchStudy, AnonymizationPolicy)
+│   ├── OpenMedSphere.Domain/          # Core business entities (PatientData, ResearchStudy, AnonymizationPolicy, Researcher, DataShare)
 │   └── OpenMedSphere.Application/     # Use cases, domain orchestration, CQRS commands/queries
 ├── Infrastructure/
 │   └── OpenMedSphere.Infrastructure/  # Database, external integrations, encryption services
@@ -44,18 +44,25 @@ OpenMedSphere.Domain/
 │   ├── PatientData.cs          # Patient data aggregate root
 │   ├── ResearchStudy.cs        # Research study aggregate root
 │   ├── AnonymizationPolicy.cs  # Anonymization policy aggregate root
+│   ├── Researcher.cs           # Researcher aggregate root (identity + crypto keys)
+│   ├── DataShare.cs            # E2E encrypted data share aggregate root
 │   └── AuditLogEntry.cs        # Audit log entry entity
 ├── Events/
 │   ├── PatientDataCreatedEvent.cs    # Raised on patient data creation
 │   ├── PatientDataAnonymizedEvent.cs # Raised on anonymization
-│   └── ResearchStudyCreatedEvent.cs  # Raised on study creation
+│   ├── ResearchStudyCreatedEvent.cs  # Raised on study creation
+│   ├── PatientDataSharedEvent.cs     # Raised when data is shared
+│   ├── DataShareAccessedEvent.cs     # Raised when share is accepted
+│   └── DataShareRevokedEvent.cs      # Raised when share is revoked
 ├── ValueObjects/
 │   ├── PatientIdentifier.cs    # Anonymized patient ID (record type)
 │   ├── DateRange.cs            # Date range with validation (record type)
 │   ├── StudyCode.cs            # Unique study code (record type)
-│   └── MedicalCode.cs          # Structured medical code (record type)
+│   ├── MedicalCode.cs          # Structured medical code (record type)
+│   └── PublicKeySet.cs         # Hybrid PQC public keys (record type)
 ├── Enums/
-│   └── AnonymizationLevel.cs   # None, Basic, Standard, Advanced, Full
+│   ├── AnonymizationLevel.cs   # None, Basic, Standard, Advanced, Full
+│   └── DataShareStatus.cs      # Pending, Accepted, Revoked, Expired
 └── Primitives/
     ├── Entity.cs               # Base entity with ID and equality
     ├── AggregateRoot.cs        # Base aggregate with domain events
@@ -314,7 +321,7 @@ AppHost uses User Secrets for local development:
 - Validation errors return HTTP 400 with detailed error messages
 
 ### Audit Logging
-- EF Core `SaveChangesInterceptor` tracks changes to `PatientData`, `ResearchStudy`, and `AnonymizationPolicy` entities
+- EF Core `SaveChangesInterceptor` tracks changes to `PatientData`, `ResearchStudy`, `AnonymizationPolicy`, `Researcher`, and `DataShare` entities
 - Records entity type, ID, action (Created/Modified/Deleted), old/new values as JSON, and timestamp
 - Stored in the `AuditLog` table
 
@@ -335,15 +342,15 @@ GitHub Actions workflow (`.github/workflows/pr-validation.yml`):
 - Basic Blazor WebAssembly frontend with PWA support
 - API with OpenAPI support and Scalar API reference
 - **Domain Layer (complete):**
-  - Aggregate roots: `PatientData`, `ResearchStudy`, `AnonymizationPolicy`, `AuditLogEntry`
-  - Value objects: `PatientIdentifier`, `DateRange`, `StudyCode`, `MedicalCode`
-  - Domain events: `PatientDataCreatedEvent`, `PatientDataAnonymizedEvent`, `ResearchStudyCreatedEvent`
-  - Enums: `AnonymizationLevel` (None, Basic, Standard, Advanced, Full)
+  - Aggregate roots: `PatientData`, `ResearchStudy`, `AnonymizationPolicy`, `Researcher`, `DataShare`, `AuditLogEntry`
+  - Value objects: `PatientIdentifier`, `DateRange`, `StudyCode`, `MedicalCode`, `PublicKeySet`
+  - Domain events: `PatientDataCreatedEvent`, `PatientDataAnonymizedEvent`, `ResearchStudyCreatedEvent`, `PatientDataSharedEvent`, `DataShareAccessedEvent`, `DataShareRevokedEvent`
+  - Enums: `AnonymizationLevel`, `DataShareStatus` (Pending, Accepted, Revoked, Expired)
   - Primitives: `Entity<TId>`, `AggregateRoot<TId>`, `ValueObject`, `IDomainEvent`
   - Encapsulated mutable collections with IReadOnlyCollection properties
 - **Application Layer (complete):**
   - Custom mediator with reflection caching for handler/validator lookup
-  - CQRS commands/queries for PatientData, ResearchStudy, AnonymizationPolicy, MedicalTerminology
+  - CQRS commands/queries for PatientData, ResearchStudy, AnonymizationPolicy, MedicalTerminology, Researchers, DataShares
   - Custom validation pipeline (`IValidator<T>`, `ValidationResult`)
   - Specification pattern for complex queries
 - **Infrastructure Layer (complete):**
@@ -357,17 +364,26 @@ GitHub Actions workflow (`.github/workflows/pr-validation.yml`):
   - JWT Bearer authentication on all endpoints
   - Rate limiting (fixed window for reads, write policy for mutations)
   - Development token endpoint
-  - Minimal API endpoints for all entities and medical terminology
-- **Testing (108 tests):**
-  - Domain entity tests (PatientData, ResearchStudy, AnonymizationPolicy)
-  - Value object tests (PatientIdentifier, DateRange, StudyCode, MedicalCode)
-  - Command handler tests with Moq (CreatePatientData, AnonymizePatientData, CreateResearchStudy, CreateAnonymizationPolicy)
+  - Minimal API endpoints for all entities, medical terminology, researchers, and data shares
+- **E2E Encrypted Data Sharing (server-side complete):**
+  - `Researcher` entity with hybrid PQC public keys (ML-KEM-768, ML-DSA-65, X25519, ECDSA P-256)
+  - `DataShare` entity for opaque encrypted blob storage (zero-knowledge server)
+  - Key rotation with monotonic version enforcement
+  - CQRS commands: RegisterResearcher, UpdatePublicKeys, CreateDataShare, AcceptDataShare, RevokeDataShare
+  - Full lifecycle: create → accept → revoke with domain events
+  - Authorization checks (only sender/recipient can access share data)
+- **Testing (157 tests):**
+  - Domain entity tests (PatientData, ResearchStudy, AnonymizationPolicy, Researcher, DataShare)
+  - Value object tests (PatientIdentifier, DateRange, StudyCode, MedicalCode, PublicKeySet)
+  - Command handler tests with Moq (CreatePatientData, AnonymizePatientData, CreateResearchStudy, CreateAnonymizationPolicy, RegisterResearcher, CreateDataShare)
 
 **Planned (Not Yet Implemented):**
-- Quantum-safe encryption services (CRYSTALS-Kyber, Falcon)
+- React + Vite + TypeScript frontend (replacing Blazor WASM)
+- Rust WASM crypto module (client-side hybrid PQC encryption via `pqcrypto` crate)
+- Client-side key generation, encryption, decryption, signing, verification
+- IndexedDB private key storage (passphrase-protected)
 - Message queue integration (RabbitMQ/Kafka)
 - Integration tests
-- Blazor frontend connected to API
 
 ## Security Considerations
 
@@ -378,5 +394,7 @@ GitHub Actions workflow (`.github/workflows/pr-validation.yml`):
 - JWT authentication required on all data endpoints
 - Rate limiting to prevent abuse
 - Audit logging for compliance tracking
+- E2E encrypted data sharing with zero-knowledge server architecture
+- Hybrid quantum-safe cryptography: ML-KEM-768 + X25519 (key agreement), ML-DSA-65 + ECDSA (signatures), AES-256-GCM (symmetric)
 - Future: Implement HIPAA and GDPR compliance requirements
-- Future: Quantum-safe encryption for data at rest and in transit
+- Future: Client-side crypto via Rust WASM for data at rest and in transit
