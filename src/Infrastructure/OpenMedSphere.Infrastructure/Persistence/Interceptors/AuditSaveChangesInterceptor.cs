@@ -15,7 +15,9 @@ internal sealed class AuditSaveChangesInterceptor : SaveChangesInterceptor
     [
         typeof(PatientData),
         typeof(ResearchStudy),
-        typeof(AnonymizationPolicy)
+        typeof(AnonymizationPolicy),
+        typeof(Researcher),
+        typeof(DataShare)
     ];
 
     private static readonly JsonSerializerOptions JsonOptions = new()

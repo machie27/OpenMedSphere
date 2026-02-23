@@ -111,5 +111,7 @@ app.MapPatientDataEndpoints();
 app.MapResearchStudyEndpoints();
 app.MapAnonymizationPolicyEndpoints();
 app.MapMedicalTerminologyEndpoints();
+app.MapResearcherEndpoints();
+app.MapDataShareEndpoints();
 
 app.Run();

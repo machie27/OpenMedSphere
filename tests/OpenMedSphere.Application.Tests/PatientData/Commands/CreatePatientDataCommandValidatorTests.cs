@@ -16,7 +16,7 @@ namespace OpenMedSphere.Application.Tests.PatientData.Commands
                 SecondaryDiagnoses = ["Diabetes", "", "Asthma"]
             };
 
-            var result = await _validator.ValidateAsync(command);
+            var result = await _validator.ValidateAsync(command, TestContext.Current.CancellationToken);
 
             Assert.False(result.IsValid);
             Assert.Contains(result.Errors, e => e.PropertyName == nameof(command.SecondaryDiagnoses));
@@ -30,7 +30,7 @@ namespace OpenMedSphere.Application.Tests.PatientData.Commands
                 SecondaryDiagnoses = ["  "]
             };
 
-            var result = await _validator.ValidateAsync(command);
+            var result = await _validator.ValidateAsync(command, TestContext.Current.CancellationToken);
 
             Assert.False(result.IsValid);
             Assert.Contains(result.Errors, e => e.PropertyName == nameof(command.SecondaryDiagnoses));
@@ -44,7 +44,7 @@ namespace OpenMedSphere.Application.Tests.PatientData.Commands
                 Medications = ["Aspirin", ""]
             };
 
-            var result = await _validator.ValidateAsync(command);
+            var result = await _validator.ValidateAsync(command, TestContext.Current.CancellationToken);
 
             Assert.False(result.IsValid);
             Assert.Contains(result.Errors, e => e.PropertyName == nameof(command.Medications));
@@ -58,7 +58,7 @@ namespace OpenMedSphere.Application.Tests.PatientData.Commands
                 SecondaryDiagnoses = ["Diabetes", "Asthma"]
             };
 
-            var result = await _validator.ValidateAsync(command);
+            var result = await _validator.ValidateAsync(command, TestContext.Current.CancellationToken);
 
             Assert.True(result.IsValid);
         }
@@ -71,7 +71,7 @@ namespace OpenMedSphere.Application.Tests.PatientData.Commands
                 Medications = ["Aspirin", "Metformin"]
             };
 
-            var result = await _validator.ValidateAsync(command);
+            var result = await _validator.ValidateAsync(command, TestContext.Current.CancellationToken);
 
             Assert.True(result.IsValid);
         }
