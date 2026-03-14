@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using OpenMedSphere.Application.DataShares.Commands.AcceptDataShare;
 using OpenMedSphere.Application.DataShares.Commands.CreateDataShare;
 using OpenMedSphere.Application.DataShares.Commands.RevokeDataShare;
@@ -66,10 +67,29 @@ public static class DataShareEndpoints
     }
 
     private static async Task<IResult> CreateAsync(
-        CreateDataShareCommand command,
+        CreateDataShareRequest request,
+        ClaimsPrincipal user,
         IMediator mediator,
         CancellationToken cancellationToken)
     {
+        if (!TryGetResearcherId(user, out Guid researcherId))
+        {
+            return Results.Unauthorized();
+        }
+
+        CreateDataShareCommand command = new()
+        {
+            SenderResearcherId = researcherId,
+            RecipientResearcherId = request.RecipientResearcherId,
+            PatientDataId = request.PatientDataId,
+            EncryptedPayload = request.EncryptedPayload,
+            EncapsulatedKey = request.EncapsulatedKey,
+            Signature = request.Signature,
+            SenderKeyVersion = request.SenderKeyVersion,
+            RecipientKeyVersion = request.RecipientKeyVersion,
+            ExpiresAtUtc = request.ExpiresAtUtc
+        };
+
         Result<Guid> result = await mediator.SendAsync<Guid>(command, cancellationToken);
 
         return result.IsSuccess
@@ -80,11 +100,15 @@ public static class DataShareEndpoints
     }
 
     private static async Task<IResult> GetIncomingAsync(
-        Guid researcherId,
+        ClaimsPrincipal user,
         IMediator mediator,
         CancellationToken cancellationToken)
     {
-        // TODO: Link researcherId to JWT claims when auth is fully integrated
+        if (!TryGetResearcherId(user, out Guid researcherId))
+        {
+            return Results.Unauthorized();
+        }
+
         Result<IReadOnlyList<DataShareSummaryResponse>> result =
             await mediator.QueryAsync<IReadOnlyList<DataShareSummaryResponse>>(
                 new GetIncomingSharesQuery { ResearcherId = researcherId },
@@ -96,11 +120,15 @@ public static class DataShareEndpoints
     }
 
     private static async Task<IResult> GetOutgoingAsync(
-        Guid researcherId,
+        ClaimsPrincipal user,
         IMediator mediator,
         CancellationToken cancellationToken)
     {
-        // TODO: Link researcherId to JWT claims when auth is fully integrated
+        if (!TryGetResearcherId(user, out Guid researcherId))
+        {
+            return Results.Unauthorized();
+        }
+
         Result<IReadOnlyList<DataShareSummaryResponse>> result =
             await mediator.QueryAsync<IReadOnlyList<DataShareSummaryResponse>>(
                 new GetOutgoingSharesQuery { ResearcherId = researcherId },
@@ -113,11 +141,15 @@ public static class DataShareEndpoints
 
     private static async Task<IResult> GetByIdAsync(
         Guid id,
-        Guid researcherId,
+        ClaimsPrincipal user,
         IMediator mediator,
         CancellationToken cancellationToken)
     {
-        // TODO: Link researcherId to JWT claims when auth is fully integrated
+        if (!TryGetResearcherId(user, out Guid researcherId))
+        {
+            return Results.Unauthorized();
+        }
+
         Result<DataShareResponse> result = await mediator.QueryAsync<DataShareResponse>(
             new GetDataShareByIdQuery { Id = id, ResearcherId = researcherId },
             cancellationToken);
@@ -131,15 +163,19 @@ public static class DataShareEndpoints
 
     private static async Task<IResult> AcceptAsync(
         Guid id,
-        AcceptDataShareRequest request,
+        ClaimsPrincipal user,
         IMediator mediator,
         CancellationToken cancellationToken)
     {
-        // TODO: Link researcherId to JWT claims when auth is fully integrated
+        if (!TryGetResearcherId(user, out Guid researcherId))
+        {
+            return Results.Unauthorized();
+        }
+
         AcceptDataShareCommand command = new()
         {
             DataShareId = id,
-            ResearcherId = request.ResearcherId
+            ResearcherId = researcherId
         };
 
         Result result = await mediator.SendAsync(command, cancellationToken);
@@ -153,11 +189,15 @@ public static class DataShareEndpoints
 
     private static async Task<IResult> RevokeAsync(
         Guid id,
-        Guid researcherId,
+        ClaimsPrincipal user,
         IMediator mediator,
         CancellationToken cancellationToken)
     {
-        // TODO: Link researcherId to JWT claims when auth is fully integrated
+        if (!TryGetResearcherId(user, out Guid researcherId))
+        {
+            return Results.Unauthorized();
+        }
+
         RevokeDataShareCommand command = new()
         {
             DataShareId = id,
@@ -172,15 +212,56 @@ public static class DataShareEndpoints
                 ? Results.NotFound(result.Error)
                 : Results.BadRequest(result.Error);
     }
+
+    private static bool TryGetResearcherId(ClaimsPrincipal user, out Guid researcherId)
+    {
+        string? claimValue = user.FindFirstValue(ClaimTypes.NameIdentifier);
+        return Guid.TryParse(claimValue, out researcherId);
+    }
 }
 
 /// <summary>
-/// Request body for accepting a data share.
+/// Request body for creating a data share. The sender ID is extracted from JWT claims.
 /// </summary>
-public sealed record AcceptDataShareRequest
+public sealed record CreateDataShareRequest
 {
     /// <summary>
-    /// Gets the researcher ID of the recipient.
+    /// Gets the recipient researcher's ID.
     /// </summary>
-    public required Guid ResearcherId { get; init; }
+    public required Guid RecipientResearcherId { get; init; }
+
+    /// <summary>
+    /// Gets the patient data ID.
+    /// </summary>
+    public required Guid PatientDataId { get; init; }
+
+    /// <summary>
+    /// Gets the Base64-encoded encrypted payload (AES-256-GCM ciphertext).
+    /// </summary>
+    public required string EncryptedPayload { get; init; }
+
+    /// <summary>
+    /// Gets the Base64-encoded hybrid KEM encapsulated key.
+    /// </summary>
+    public required string EncapsulatedKey { get; init; }
+
+    /// <summary>
+    /// Gets the Base64-encoded hybrid signature.
+    /// </summary>
+    public required string Signature { get; init; }
+
+    /// <summary>
+    /// Gets the sender's key version.
+    /// </summary>
+    public required int SenderKeyVersion { get; init; }
+
+    /// <summary>
+    /// Gets the recipient's key version.
+    /// </summary>
+    public required int RecipientKeyVersion { get; init; }
+
+    /// <summary>
+    /// Gets the optional expiry date.
+    /// </summary>
+    public DateTime? ExpiresAtUtc { get; init; }
 }
