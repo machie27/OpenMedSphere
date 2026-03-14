@@ -197,6 +197,9 @@ public sealed class DataShare : AggregateRoot<Guid>
 
     /// <summary>
     /// Determines whether the data share has expired.
+    /// Expiry is computed at query time rather than materialized to the <see cref="Status"/> property.
+    /// This avoids the need for a background job and ensures real-time accuracy.
+    /// Queries filtering expired shares should use <see cref="ExpiresAtUtc"/> directly.
     /// </summary>
     /// <returns>True if the share has expired; otherwise, false.</returns>
     public bool IsExpired() =>

@@ -29,7 +29,14 @@ internal sealed class AcceptDataShareCommandHandler(
             return Result.InvalidOperation("Only the recipient can accept a data share.");
         }
 
-        dataShare.Accept();
+        try
+        {
+            dataShare.Accept();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Result.InvalidOperation(ex.Message);
+        }
 
         repository.Update(dataShare);
         await unitOfWork.SaveChangesAsync(cancellationToken);

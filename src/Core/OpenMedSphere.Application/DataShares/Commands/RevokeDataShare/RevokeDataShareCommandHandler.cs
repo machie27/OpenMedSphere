@@ -29,7 +29,14 @@ internal sealed class RevokeDataShareCommandHandler(
             return Result.InvalidOperation("Only the sender can revoke a data share.");
         }
 
-        dataShare.Revoke();
+        try
+        {
+            dataShare.Revoke();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Result.InvalidOperation(ex.Message);
+        }
 
         repository.Update(dataShare);
         await unitOfWork.SaveChangesAsync(cancellationToken);
