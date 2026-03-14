@@ -66,7 +66,7 @@ OpenMedSphere.Domain/
 └── Primitives/
     ├── Entity.cs               # Base entity with ID and equality
     ├── AggregateRoot.cs        # Base aggregate with domain events
-    ├── ValueObject.cs          # Base value object (unused — all value objects are C# records)
+    ├── (ValueObject.cs removed — all value objects are C# records with structural equality)
     └── IDomainEvent.cs         # Domain event marker interface
 ```
 
@@ -349,7 +349,7 @@ GitHub Actions workflow (`.github/workflows/pr-validation.yml`):
   - Value objects: `PatientIdentifier`, `DateRange`, `StudyCode`, `MedicalCode`, `PublicKeySet`
   - Domain events: `PatientDataCreatedEvent`, `PatientDataAnonymizedEvent`, `ResearchStudyCreatedEvent`, `ResearcherCreatedEvent`, `PatientDataSharedEvent`, `DataShareAccessedEvent`, `DataShareRevokedEvent`
   - Enums: `AnonymizationLevel`, `DataShareStatus` (Pending, Accepted, Revoked, Expired)
-  - Primitives: `Entity<TId>`, `AggregateRoot<TId>`, `IDomainEvent` (note: `ValueObject` base class exists but is unused — all value objects are C# records)
+  - Primitives: `Entity<TId>`, `AggregateRoot<TId>`, `IDomainEvent` (all value objects are C# records, no base class needed)
   - Encapsulated mutable collections with IReadOnlyCollection properties
 - **Application Layer (complete):**
   - Custom mediator with reflection caching for handler/validator lookup
