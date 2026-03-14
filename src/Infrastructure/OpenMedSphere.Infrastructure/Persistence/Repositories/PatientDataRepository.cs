@@ -15,11 +15,11 @@ internal sealed class PatientDataRepository(ApplicationDbContext dbContext)
         string diagnosis,
         CancellationToken cancellationToken = default)
     {
-        string escapedDiagnosis = EscapeLikePattern(diagnosis);
+        var diagnosisLower = diagnosis.ToLower();
 
         return await DbSet
             .Where(p => p.PrimaryDiagnosis != null &&
-                        EF.Functions.ILike(p.PrimaryDiagnosis, $"%{escapedDiagnosis}%"))
+                        p.PrimaryDiagnosis.ToLower().Contains(diagnosisLower))
             .ToListAsync(cancellationToken);
     }
 
@@ -29,10 +29,4 @@ internal sealed class PatientDataRepository(ApplicationDbContext dbContext)
         await DbSet
             .Where(p => p.IsAnonymized)
             .ToListAsync(cancellationToken);
-
-    private static string EscapeLikePattern(string input) =>
-        input
-            .Replace("\\", "\\\\")
-            .Replace("%", "\\%")
-            .Replace("_", "\\_");
 }

@@ -9,7 +9,7 @@ OpenMedSphere is a secure medical research collaboration platform built with .NE
 **Key Goals:**
 - Secure processing and sharing of anonymized patient data
 - HIPAA and GDPR compliance
-- OpenPGP with quantum-safe encryption (CRYSTALS-Kyber, Falcon) - planned but not yet implemented
+- Hybrid quantum-safe encryption (ML-KEM-768 + X25519, ML-DSA-65 + ECDSA, AES-256-GCM) for E2E encrypted data sharing
 - Self-hostable architecture using .NET Aspire
 - Licensed under AGPL v3
 
@@ -21,13 +21,12 @@ The project follows **Clean Architecture** and **Domain-Driven Design (DDD)** pr
 ```
 src/
 ├── Core/
-│   ├── OpenMedSphere.Domain/          # Core business entities (PatientData, ResearchStudy, AnonymizationPolicy)
+│   ├── OpenMedSphere.Domain/          # Core business entities (PatientData, ResearchStudy, AnonymizationPolicy, Researcher, DataShare)
 │   └── OpenMedSphere.Application/     # Use cases, domain orchestration, CQRS commands/queries
 ├── Infrastructure/
 │   └── OpenMedSphere.Infrastructure/  # Database, external integrations, encryption services
 └── Presentation/
     ├── OpenMedSphere.API/             # ASP.NET Core Web API (minimal endpoints)
-    ├── OpenMedSphere.Web/             # Blazor WebAssembly frontend with PWA support
     ├── OpenMedSphere.AppHost/         # .NET Aspire orchestration host
     └── OpenMedSphere.ServiceDefaults/ # Shared service configuration (telemetry, health checks)
 tests/
@@ -44,22 +43,30 @@ OpenMedSphere.Domain/
 │   ├── PatientData.cs          # Patient data aggregate root
 │   ├── ResearchStudy.cs        # Research study aggregate root
 │   ├── AnonymizationPolicy.cs  # Anonymization policy aggregate root
+│   ├── Researcher.cs           # Researcher aggregate root (identity + crypto keys)
+│   ├── DataShare.cs            # E2E encrypted data share aggregate root
 │   └── AuditLogEntry.cs        # Audit log entry entity
 ├── Events/
 │   ├── PatientDataCreatedEvent.cs    # Raised on patient data creation
 │   ├── PatientDataAnonymizedEvent.cs # Raised on anonymization
-│   └── ResearchStudyCreatedEvent.cs  # Raised on study creation
+│   ├── ResearchStudyCreatedEvent.cs  # Raised on study creation
+│   ├── ResearcherCreatedEvent.cs     # Raised on researcher registration
+│   ├── PatientDataSharedEvent.cs     # Raised when data is shared
+│   ├── DataShareAccessedEvent.cs     # Raised when share is accepted
+│   └── DataShareRevokedEvent.cs      # Raised when share is revoked
 ├── ValueObjects/
 │   ├── PatientIdentifier.cs    # Anonymized patient ID (record type)
 │   ├── DateRange.cs            # Date range with validation (record type)
 │   ├── StudyCode.cs            # Unique study code (record type)
-│   └── MedicalCode.cs          # Structured medical code (record type)
+│   ├── MedicalCode.cs          # Structured medical code (record type)
+│   └── PublicKeySet.cs         # Hybrid PQC public keys (record type)
 ├── Enums/
-│   └── AnonymizationLevel.cs   # None, Basic, Standard, Advanced, Full
+│   ├── AnonymizationLevel.cs   # None, Basic, Standard, Advanced, Full
+│   └── DataShareStatus.cs      # Pending, Accepted, Revoked, Expired
 └── Primitives/
     ├── Entity.cs               # Base entity with ID and equality
     ├── AggregateRoot.cs        # Base aggregate with domain events
-    ├── ValueObject.cs          # Base value object
+    ├── (ValueObject.cs removed — all value objects are C# records with structural equality)
     └── IDomainEvent.cs         # Domain event marker interface
 ```
 
@@ -96,13 +103,12 @@ All services call `builder.AddServiceDefaults()` to register these features.
 ## Technology Stack
 
 - **.NET 10.0** (C# 14)
-- **.NET Aspire 13.1.0**: Cloud-native orchestration, service discovery, observability
-- **Blazor WebAssembly**: Frontend with PWA/service worker support
-- **EF Core 10.0.2** with PostgreSQL (Npgsql)
+- **.NET Aspire 13.1.2**: Cloud-native orchestration, service discovery, observability
+- **EF Core 10.0.5** with PostgreSQL (Npgsql)
 - **OpenTelemetry 1.15.0**: Distributed tracing and observability
-- **JWT Bearer Authentication**: API security with configurable JWT tokens
+- **JWT Bearer Authentication**: API security with researcher ID extracted from JWT `NameIdentifier` claim
 - **Rate Limiting**: Built-in ASP.NET Core rate limiter (fixed window policies)
-- **xUnit 2.9.3**: Testing framework
+- **xUnit v3 (3.2.2)**: Testing framework
 - **Moq 4.20.72**: Mocking framework for tests
 
 ## Development Commands
@@ -123,27 +129,23 @@ dotnet run --project src/Presentation/OpenMedSphere.AppHost/OpenMedSphere.AppHos
 ```
 This starts:
 - **API**: Backend service with health checks at `/health`
-- **Frontend**: Blazor WebAssembly with external HTTP endpoints
+- **PostgreSQL**: Database with pgAdmin
+- **Redis**: Distributed cache
 - **Aspire Dashboard** (typically at `http://localhost:15888`) showing:
   - All running services and their URLs
   - Distributed traces
   - Metrics and logs
   - Service health status
 
-The frontend waits for the API to be ready before starting (`WaitFor(api)`).
-
 ### Run Individual Services
 ```bash
 # API only
 dotnet run --project src/Presentation/OpenMedSphere.API/OpenMedSphere.API.csproj
-
-# Blazor Web frontend only
-dotnet run --project src/Presentation/OpenMedSphere.Web/OpenMedSphere.Web.csproj
 ```
 
 ### Testing
 ```bash
-# Run all tests (108 tests: 93 domain + 15 application)
+# Run all tests (172 tests: 133 domain + 39 application)
 dotnet test OpenMedSphere.slnx
 
 # Run domain tests only
@@ -202,6 +204,7 @@ Follow the established patterns in existing entities:
 - Mark aggregates as `sealed`
 - Use `required` modifier for mandatory properties
 - Track `CreatedAtUtc` and `UpdatedAtUtc` timestamps
+- Use `private set` for state properties modified by domain methods (e.g., `Status`, `UpdatedAtUtc`) — EF Core sets them via reflection
 - Validate inputs using `ArgumentNullException.ThrowIfNull()`, `ArgumentException.ThrowIfNullOrWhiteSpace()`, etc.
 - Raise domain events in factory methods and critical state changes
 - Encapsulate mutable collections with private backing fields and `IReadOnlyCollection<T>` public properties
@@ -215,7 +218,7 @@ public sealed class MyEntity : AggregateRoot<Guid>
     public required string Name { get; set; }
     public IReadOnlyCollection<string> Items => _items.AsReadOnly();
     public DateTime CreatedAtUtc { get; init; }
-    public DateTime? UpdatedAtUtc { get; set; }
+    public DateTime? UpdatedAtUtc { get; private set; }
 
     private MyEntity() : base() { }
     private MyEntity(Guid id) : base(id) { CreatedAtUtc = DateTime.UtcNow; }
@@ -223,7 +226,7 @@ public sealed class MyEntity : AggregateRoot<Guid>
     public static MyEntity Create(string name)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
-        var entity = new MyEntity(Guid.NewGuid()) { Name = name };
+        var entity = new MyEntity(Guid.CreateVersion7()) { Name = name };
         entity.RaiseDomainEvent(new MyEntityCreatedEvent(entity.Id));
         return entity;
     }
@@ -236,9 +239,17 @@ public sealed class MyEntity : AggregateRoot<Guid>
 - The mediator runs validation before dispatching to handlers
 - Use simple `if` checks that add `ValidationError` entries
 - Validators return `ValidationResult` (not exceptions)
+- Every command should have a validator — even if it only checks for empty GUIDs
+- Use built-in .NET validation where possible (e.g., `MailAddress.TryCreate` for email)
+
+### Command Handler Patterns
+- Check preconditions (status, permissions, active state) before calling domain methods
+- Return `Result.InvalidOperation()` for failed preconditions — do NOT catch domain exceptions for control flow
+- Validate entity exists → check authorization → check state → perform action
+- Use `Guid.CreateVersion7()` for all new entity IDs (better index performance, time-sortable)
 
 ### Testing Conventions
-- **Framework**: xUnit for all tests
+- **Framework**: xUnit v3 for all tests
 - **Mocking**: Moq for test doubles
 - **Naming**: `[MethodName]_[TestScenario]_[ExpectedBehavior]`
 - **Test Class Naming**: `[ClassBeingTested]Tests`
@@ -250,21 +261,21 @@ public sealed class MyEntity : AggregateRoot<Guid>
 This solution uses **Central Package Management** via `Directory.Packages.props`.
 
 ### Current Package Versions
+See `Directory.Packages.props` for the authoritative list. Key packages:
 | Package | Version |
 |---------|---------|
-| Aspire.Hosting.AppHost | 13.1.0 |
-| Microsoft.AspNetCore.Authentication.JwtBearer | 10.0.2 |
-| Microsoft.AspNetCore.OpenApi | 10.0.2 |
-| Microsoft.AspNetCore.Components.WebAssembly | 10.0.2 |
-| Microsoft.EntityFrameworkCore | 10.0.2 |
+| Aspire.AppHost.Sdk | 13.1.2 |
+| Aspire.Hosting.PostgreSQL / Redis | 13.1.2 |
+| Microsoft.AspNetCore.Authentication.JwtBearer | 10.0.5 |
+| Microsoft.EntityFrameworkCore | 10.0.5 |
 | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.0 |
-| Microsoft.Extensions.Caching.Hybrid | 10.2.0 |
-| Microsoft.Extensions.Http.Resilience | 10.2.0 |
-| Microsoft.Extensions.ServiceDiscovery | 10.2.0 |
-| OpenTelemetry.* | 1.15.0 |
-| Scalar.AspNetCore | 2.12.35 |
-| xUnit | 2.9.3 |
+| Microsoft.Extensions.Caching.Hybrid | 10.4.0 |
+| OpenTelemetry.* | 1.15.x |
+| Scalar.AspNetCore | 2.13.8 |
+| xunit.v3 | 3.2.2 |
 | Moq | 4.20.72 |
+
+**Note:** `Aspire.Hosting.AppHost` is implicitly provided by the `Aspire.AppHost.Sdk` and must NOT be listed in `Directory.Packages.props`.
 
 ### Adding New Packages
 1. Add version to `Directory.Packages.props`:
@@ -300,8 +311,9 @@ AppHost uses User Secrets for local development:
 
 ### Authentication
 - **JWT Bearer** authentication on all API endpoints
+- Researcher identity extracted from JWT `NameIdentifier` claim (not from request parameters)
 - Configuration via `Jwt:Key`, `Jwt:Issuer`, `Jwt:Audience` settings (with dev defaults)
-- Development token endpoint: `POST /api/auth/dev-token` (only available in Development environment)
+- Development token endpoint: `POST /api/auth/dev-token?researcherId={guid}` (only available in Development environment)
 
 ### Rate Limiting
 - **Fixed window** policy (100 requests/minute) for read endpoints (GET)
@@ -314,7 +326,7 @@ AppHost uses User Secrets for local development:
 - Validation errors return HTTP 400 with detailed error messages
 
 ### Audit Logging
-- EF Core `SaveChangesInterceptor` tracks changes to `PatientData`, `ResearchStudy`, and `AnonymizationPolicy` entities
+- EF Core `SaveChangesInterceptor` tracks changes to `PatientData`, `ResearchStudy`, `AnonymizationPolicy`, `Researcher`, and `DataShare` entities
 - Records entity type, ID, action (Created/Modified/Deleted), old/new values as JSON, and timestamp
 - Stored in the `AuditLog` table
 
@@ -330,20 +342,19 @@ GitHub Actions workflow (`.github/workflows/pr-validation.yml`):
 
 **Implemented:**
 - Solution structure with Clean Architecture layers
-- Aspire orchestration with AppHost (API + Frontend with health checks)
+- Aspire orchestration with AppHost (API + PostgreSQL + Redis with health checks)
 - ServiceDefaults with OpenTelemetry, health checks, resilience
-- Basic Blazor WebAssembly frontend with PWA support
 - API with OpenAPI support and Scalar API reference
 - **Domain Layer (complete):**
-  - Aggregate roots: `PatientData`, `ResearchStudy`, `AnonymizationPolicy`, `AuditLogEntry`
-  - Value objects: `PatientIdentifier`, `DateRange`, `StudyCode`, `MedicalCode`
-  - Domain events: `PatientDataCreatedEvent`, `PatientDataAnonymizedEvent`, `ResearchStudyCreatedEvent`
-  - Enums: `AnonymizationLevel` (None, Basic, Standard, Advanced, Full)
-  - Primitives: `Entity<TId>`, `AggregateRoot<TId>`, `ValueObject`, `IDomainEvent`
+  - Aggregate roots: `PatientData`, `ResearchStudy`, `AnonymizationPolicy`, `Researcher`, `DataShare`, `AuditLogEntry`
+  - Value objects: `PatientIdentifier`, `DateRange`, `StudyCode`, `MedicalCode`, `PublicKeySet`
+  - Domain events: `PatientDataCreatedEvent`, `PatientDataAnonymizedEvent`, `ResearchStudyCreatedEvent`, `ResearcherCreatedEvent`, `PatientDataSharedEvent`, `DataShareAccessedEvent`, `DataShareRevokedEvent`
+  - Enums: `AnonymizationLevel`, `DataShareStatus` (Pending, Accepted, Revoked, Expired)
+  - Primitives: `Entity<TId>`, `AggregateRoot<TId>`, `IDomainEvent` (all value objects are C# records, no base class needed)
   - Encapsulated mutable collections with IReadOnlyCollection properties
 - **Application Layer (complete):**
   - Custom mediator with reflection caching for handler/validator lookup
-  - CQRS commands/queries for PatientData, ResearchStudy, AnonymizationPolicy, MedicalTerminology
+  - CQRS commands/queries for PatientData, ResearchStudy, AnonymizationPolicy, MedicalTerminology, Researchers, DataShares
   - Custom validation pipeline (`IValidator<T>`, `ValidationResult`)
   - Specification pattern for complex queries
 - **Infrastructure Layer (complete):**
@@ -352,22 +363,35 @@ GitHub Actions workflow (`.github/workflows/pr-validation.yml`):
   - ICD-11 medical terminology integration (API + fallback static dataset)
   - HybridCache (`Microsoft.Extensions.Caching.Hybrid`) for ICD-11 API response caching
   - Audit logging via SaveChangesInterceptor
+  - FK constraints on DataShare → Researcher and PatientData (with Restrict delete)
   - Database indexes on key query columns
 - **API Layer (complete):**
   - JWT Bearer authentication on all endpoints
   - Rate limiting (fixed window for reads, write policy for mutations)
   - Development token endpoint
-  - Minimal API endpoints for all entities and medical terminology
-- **Testing (108 tests):**
-  - Domain entity tests (PatientData, ResearchStudy, AnonymizationPolicy)
-  - Value object tests (PatientIdentifier, DateRange, StudyCode, MedicalCode)
-  - Command handler tests with Moq (CreatePatientData, AnonymizePatientData, CreateResearchStudy, CreateAnonymizationPolicy)
+  - Minimal API endpoints for all entities, medical terminology, researchers, and data shares
+- **E2E Encrypted Data Sharing (server-side complete):**
+  - `Researcher` entity with hybrid PQC public keys (ML-KEM-768, ML-DSA-65, X25519, ECDSA P-256)
+  - `DataShare` entity for opaque encrypted blob storage (zero-knowledge server)
+  - Key rotation with monotonic version enforcement
+  - CQRS commands: RegisterResearcher, UpdatePublicKeys, CreateDataShare, AcceptDataShare, RevokeDataShare
+  - Full lifecycle: create → accept → revoke with domain events
+  - Authorization via JWT claims (researcher ID extracted from `NameIdentifier` claim, not request parameters)
+  - Active status checks on sender/recipient during share creation
+  - Handler-level precondition checks for state transitions (no exception-driven control flow)
+- **Testing (172 tests):**
+  - Domain entity tests (PatientData, ResearchStudy, AnonymizationPolicy, Researcher, DataShare)
+  - Value object tests (PatientIdentifier, DateRange, StudyCode, MedicalCode, PublicKeySet)
+  - Command handler tests with Moq (CreatePatientData, AnonymizePatientData, CreateResearchStudy, CreateAnonymizationPolicy, RegisterResearcher, CreateDataShare, AcceptDataShare, RevokeDataShare, UpdateResearcherPublicKeys)
+  - Validator tests (CreatePatientDataCommandValidator)
 
 **Planned (Not Yet Implemented):**
-- Quantum-safe encryption services (CRYSTALS-Kyber, Falcon)
+- React + Vite + TypeScript frontend (Blazor WASM has been removed)
+- Rust WASM crypto module (client-side hybrid PQC encryption via `pqcrypto` crate)
+- Client-side key generation, encryption, decryption, signing, verification
+- IndexedDB private key storage (passphrase-protected)
 - Message queue integration (RabbitMQ/Kafka)
 - Integration tests
-- Blazor frontend connected to API
 
 ## Security Considerations
 
@@ -378,5 +402,7 @@ GitHub Actions workflow (`.github/workflows/pr-validation.yml`):
 - JWT authentication required on all data endpoints
 - Rate limiting to prevent abuse
 - Audit logging for compliance tracking
+- E2E encrypted data sharing with zero-knowledge server architecture
+- Hybrid quantum-safe cryptography: ML-KEM-768 + X25519 (key agreement), ML-DSA-65 + ECDSA (signatures), AES-256-GCM (symmetric)
 - Future: Implement HIPAA and GDPR compliance requirements
-- Future: Quantum-safe encryption for data at rest and in transit
+- Future: Client-side crypto via Rust WASM for data at rest and in transit

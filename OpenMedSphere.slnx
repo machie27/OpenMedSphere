@@ -31,7 +31,6 @@
     <Project Path="src/Presentation/OpenMedSphere.API/OpenMedSphere.API.csproj" />
     <Project Path="src/Presentation/OpenMedSphere.AppHost/OpenMedSphere.AppHost.csproj" />
     <Project Path="src/Presentation/OpenMedSphere.ServiceDefaults/OpenMedSphere.ServiceDefaults.csproj" />
-    <Project Path="src/Presentation/OpenMedSphere.Web/OpenMedSphere.Web.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/OpenMedSphere.Domain.Tests/OpenMedSphere.Domain.Tests.csproj" />

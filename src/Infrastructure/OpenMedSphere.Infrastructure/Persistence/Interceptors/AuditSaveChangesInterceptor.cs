@@ -15,7 +15,16 @@ internal sealed class AuditSaveChangesInterceptor : SaveChangesInterceptor
     [
         typeof(PatientData),
         typeof(ResearchStudy),
-        typeof(AnonymizationPolicy)
+        typeof(AnonymizationPolicy),
+        typeof(Researcher),
+        typeof(DataShare)
+    ];
+
+    private static readonly HashSet<string> ExcludedFromAudit =
+    [
+        nameof(DataShare.EncryptedPayload),
+        nameof(DataShare.EncapsulatedKey),
+        nameof(DataShare.Signature)
     ];
 
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -108,6 +117,11 @@ internal sealed class AuditSaveChangesInterceptor : SaveChangesInterceptor
             }
 
             string propertyName = property.Metadata.Name;
+
+            if (ExcludedFromAudit.Contains(propertyName))
+            {
+                continue;
+            }
             object? value = useOriginalValues ? property.OriginalValue : property.CurrentValue;
             values[propertyName] = value;
         }

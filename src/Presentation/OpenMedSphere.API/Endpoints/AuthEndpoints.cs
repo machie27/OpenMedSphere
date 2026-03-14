@@ -30,7 +30,10 @@ public static class AuthEndpoints
         return app;
     }
 
-    private static IResult GenerateDevToken(IConfiguration configuration, IHostEnvironment environment)
+    private static IResult GenerateDevToken(
+        IConfiguration configuration,
+        IHostEnvironment environment,
+        Guid? researcherId = null)
     {
         if (!environment.IsDevelopment())
         {
@@ -41,12 +44,14 @@ public static class AuthEndpoints
         string issuer = configuration["Jwt:Issuer"] ?? "OpenMedSphere-Dev";
         string audience = configuration["Jwt:Audience"] ?? "OpenMedSphere-Dev";
 
+        Guid userId = researcherId ?? Guid.CreateVersion7();
+
         SymmetricSecurityKey securityKey = new(Encoding.UTF8.GetBytes(key));
         SigningCredentials credentials = new(securityKey, SecurityAlgorithms.HmacSha256);
 
         Claim[] claims =
         [
-            new Claim(ClaimTypes.NameIdentifier, Guid.CreateVersion7().ToString()),
+            new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
             new Claim(ClaimTypes.Name, "dev-user"),
             new Claim(ClaimTypes.Role, "Admin")
         ];
