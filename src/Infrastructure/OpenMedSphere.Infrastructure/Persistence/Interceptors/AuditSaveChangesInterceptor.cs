@@ -20,6 +20,13 @@ internal sealed class AuditSaveChangesInterceptor : SaveChangesInterceptor
         typeof(DataShare)
     ];
 
+    private static readonly HashSet<string> ExcludedFromAudit =
+    [
+        nameof(DataShare.EncryptedPayload),
+        nameof(DataShare.EncapsulatedKey),
+        nameof(DataShare.Signature)
+    ];
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = false
@@ -110,6 +117,11 @@ internal sealed class AuditSaveChangesInterceptor : SaveChangesInterceptor
             }
 
             string propertyName = property.Metadata.Name;
+
+            if (ExcludedFromAudit.Contains(propertyName))
+            {
+                continue;
+            }
             object? value = useOriginalValues ? property.OriginalValue : property.CurrentValue;
             values[propertyName] = value;
         }

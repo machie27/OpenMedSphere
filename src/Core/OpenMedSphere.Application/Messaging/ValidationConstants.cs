@@ -26,7 +26,10 @@ internal static class ValidationConstants
     public const int MaxNameLength = 200;
     public const int MaxEmailLength = 320;
     public const int MaxBase64KeyLength = 10000;
-    public const int MaxEncryptedPayloadLength = 50_000_000;
+    /// <summary>
+    /// 5 MB — sufficient for AES-256-GCM ciphertext of anonymized patient data.
+    /// </summary>
+    public const int MaxEncryptedPayloadLength = 5_000_000;
     public const int MaxEncapsulatedKeyLength = 10000;
     public const int MaxSignatureLength = 20000;
 }

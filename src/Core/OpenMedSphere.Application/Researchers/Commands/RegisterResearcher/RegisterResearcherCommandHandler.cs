@@ -35,7 +35,17 @@ internal sealed class RegisterResearcherCommandHandler(
         var researcher = Researcher.Create(command.Name, command.Email, command.Institution, publicKeys);
 
         await repository.AddAsync(researcher, cancellationToken);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        try
+        {
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception ex) when (ex.InnerException?.Message.Contains("IX_Researchers_Email", StringComparison.Ordinal) == true)
+        {
+            // Unique index violation from concurrent insert — the optimistic check above
+            // handles the common case; this catches the rare race condition.
+            return Result<Guid>.Conflict($"A researcher with email '{command.Email}' already exists.");
+        }
 
         return Result<Guid>.Success(researcher.Id);
     }

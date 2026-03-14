@@ -27,9 +27,13 @@ internal sealed class ResearchStudyRepository(ApplicationDbContext dbContext)
     /// <inheritdoc />
     public async Task<IReadOnlyList<ResearchStudy>> GetByResearchAreaAsync(
         string researchArea,
-        CancellationToken cancellationToken = default) =>
-        await DbSet
+        CancellationToken cancellationToken = default)
+    {
+        var areaLower = researchArea.ToLower();
+
+        return await DbSet
             .Where(r => r.ResearchArea != null &&
-                        EF.Functions.ILike(r.ResearchArea, $"%{researchArea}%"))
+                        r.ResearchArea.ToLower().Contains(areaLower))
             .ToListAsync(cancellationToken);
+    }
 }

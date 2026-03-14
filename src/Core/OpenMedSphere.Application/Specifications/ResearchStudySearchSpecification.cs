@@ -1,5 +1,4 @@
 using OpenMedSphere.Application.Abstractions.Specifications;
-using OpenMedSphere.Application.Common;
 using OpenMedSphere.Domain.Entities;
 
 namespace OpenMedSphere.Application.Specifications;
@@ -33,14 +32,14 @@ public sealed class ResearchStudySearchSpecification : Specification<ResearchStu
 
         if (!string.IsNullOrWhiteSpace(researchArea))
         {
-            var researchAreaLower = LikePatternHelper.EscapeLikeWildcards(researchArea.ToLower());
+            var researchAreaLower = researchArea.ToLower();
             AddFilter(r => r.ResearchArea != null &&
                            r.ResearchArea.ToLower().Contains(researchAreaLower));
         }
 
         if (!string.IsNullOrWhiteSpace(titleSearch))
         {
-            var titleLower = LikePatternHelper.EscapeLikeWildcards(titleSearch.ToLower());
+            var titleLower = titleSearch.ToLower();
             AddFilter(r => r.Title.ToLower().Contains(titleLower));
         }
 

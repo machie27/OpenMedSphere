@@ -1,5 +1,4 @@
 using OpenMedSphere.Application.Abstractions.Specifications;
-using OpenMedSphere.Application.Common;
 
 namespace OpenMedSphere.Application.Specifications;
 
@@ -34,7 +33,7 @@ public sealed class PatientDataSearchSpecification : Specification<Domain.Entiti
 
         if (!string.IsNullOrWhiteSpace(diagnosisText))
         {
-            var diagnosisTextLower = LikePatternHelper.EscapeLikeWildcards(diagnosisText.ToLower());
+            var diagnosisTextLower = diagnosisText.ToLower();
             AddFilter(p =>
                 (p.PrimaryDiagnosis != null && p.PrimaryDiagnosis.ToLower().Contains(diagnosisTextLower)) ||
                 p.SecondaryDiagnoses.Any(d => d.ToLower().Contains(diagnosisTextLower)));
@@ -49,7 +48,7 @@ public sealed class PatientDataSearchSpecification : Specification<Domain.Entiti
 
         if (!string.IsNullOrWhiteSpace(region))
         {
-            var regionLower = LikePatternHelper.EscapeLikeWildcards(region.ToLower());
+            var regionLower = region.ToLower();
             AddFilter(p => p.Region != null && p.Region.ToLower().Contains(regionLower));
         }
 
