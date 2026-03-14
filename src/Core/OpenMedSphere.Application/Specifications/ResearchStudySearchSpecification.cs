@@ -1,4 +1,5 @@
 using OpenMedSphere.Application.Abstractions.Specifications;
+using OpenMedSphere.Application.Common;
 using OpenMedSphere.Domain.Entities;
 
 namespace OpenMedSphere.Application.Specifications;
@@ -32,14 +33,14 @@ public sealed class ResearchStudySearchSpecification : Specification<ResearchStu
 
         if (!string.IsNullOrWhiteSpace(researchArea))
         {
-            var researchAreaLower = EscapeLikeWildcards(researchArea.ToLower());
+            var researchAreaLower = LikePatternHelper.EscapeLikeWildcards(researchArea.ToLower());
             AddFilter(r => r.ResearchArea != null &&
                            r.ResearchArea.ToLower().Contains(researchAreaLower));
         }
 
         if (!string.IsNullOrWhiteSpace(titleSearch))
         {
-            var titleLower = EscapeLikeWildcards(titleSearch.ToLower());
+            var titleLower = LikePatternHelper.EscapeLikeWildcards(titleSearch.ToLower());
             AddFilter(r => r.Title.ToLower().Contains(titleLower));
         }
 
@@ -58,16 +59,4 @@ public sealed class ResearchStudySearchSpecification : Specification<ResearchStu
         ApplyPaging((page - 1) * pageSize, pageSize);
     }
 
-    /// <summary>
-    /// Escapes LIKE wildcard characters (<c>%</c>, <c>_</c>, <c>\</c>) in user input to prevent
-    /// unintended pattern matching. Relies on PostgreSQL's default backslash (<c>\</c>) as the
-    /// LIKE escape character. Values are parameterized by EF Core, preventing SQL injection.
-    /// </summary>
-    /// <param name="input">The raw user input to escape.</param>
-    /// <returns>The escaped string safe for use in LIKE patterns.</returns>
-    private static string EscapeLikeWildcards(string input) =>
-        input
-            .Replace("\\", "\\\\")
-            .Replace("%", "\\%")
-            .Replace("_", "\\_");
 }

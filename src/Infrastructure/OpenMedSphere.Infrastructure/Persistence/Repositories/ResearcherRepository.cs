@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using OpenMedSphere.Application.Abstractions.Data;
+using OpenMedSphere.Application.Common;
 using OpenMedSphere.Domain.Entities;
 
 namespace OpenMedSphere.Infrastructure.Persistence.Repositories;
@@ -21,7 +22,7 @@ internal sealed class ResearcherRepository(ApplicationDbContext dbContext)
         string query,
         CancellationToken cancellationToken = default)
     {
-        string escapedQuery = EscapeLikePattern(query);
+        string escapedQuery = LikePatternHelper.EscapeLikeWildcards(query);
 
         return await DbSet
             .Where(r => r.IsActive &&
@@ -31,9 +32,4 @@ internal sealed class ResearcherRepository(ApplicationDbContext dbContext)
             .ToListAsync(cancellationToken);
     }
 
-    private static string EscapeLikePattern(string input) =>
-        input
-            .Replace("\\", "\\\\")
-            .Replace("%", "\\%")
-            .Replace("_", "\\_");
 }

@@ -159,7 +159,7 @@ namespace OpenMedSphere.Application.Tests.DataShares.Commands
                 "payload", "key", "sig", 1, 1,
                 DateTime.UtcNow.AddMilliseconds(50));
 
-            await Task.Delay(100);
+            await Task.Delay(100, TestContext.Current.CancellationToken);
 
             _repositoryMock
                 .Setup(r => r.GetByIdAsync(dataShare.Id, It.IsAny<CancellationToken>()))

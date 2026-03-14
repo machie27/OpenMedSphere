@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using OpenMedSphere.Application.Abstractions.Data;
+using OpenMedSphere.Application.Common;
 using OpenMedSphere.Domain.Entities;
 
 namespace OpenMedSphere.Infrastructure.Persistence.Repositories;
@@ -15,7 +16,7 @@ internal sealed class PatientDataRepository(ApplicationDbContext dbContext)
         string diagnosis,
         CancellationToken cancellationToken = default)
     {
-        string escapedDiagnosis = EscapeLikePattern(diagnosis);
+        string escapedDiagnosis = LikePatternHelper.EscapeLikeWildcards(diagnosis);
 
         return await DbSet
             .Where(p => p.PrimaryDiagnosis != null &&
@@ -30,9 +31,4 @@ internal sealed class PatientDataRepository(ApplicationDbContext dbContext)
             .Where(p => p.IsAnonymized)
             .ToListAsync(cancellationToken);
 
-    private static string EscapeLikePattern(string input) =>
-        input
-            .Replace("\\", "\\\\")
-            .Replace("%", "\\%")
-            .Replace("_", "\\_");
 }
