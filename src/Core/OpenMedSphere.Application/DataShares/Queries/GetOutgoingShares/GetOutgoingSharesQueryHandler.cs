@@ -25,7 +25,7 @@ internal sealed class GetOutgoingSharesQueryHandler(IDataShareRepository reposit
                 SenderResearcherId = s.SenderResearcherId,
                 RecipientResearcherId = s.RecipientResearcherId,
                 PatientDataId = s.PatientDataId,
-                Status = s.Status,
+                Status = s.EffectiveStatus,
                 SharedAtUtc = s.SharedAtUtc,
                 AccessedAtUtc = s.AccessedAtUtc,
                 ExpiresAtUtc = s.ExpiresAtUtc

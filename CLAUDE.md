@@ -204,6 +204,7 @@ Follow the established patterns in existing entities:
 - Mark aggregates as `sealed`
 - Use `required` modifier for mandatory properties
 - Track `CreatedAtUtc` and `UpdatedAtUtc` timestamps
+- Use `private set` for state properties modified by domain methods (e.g., `Status`, `UpdatedAtUtc`) — EF Core sets them via reflection
 - Validate inputs using `ArgumentNullException.ThrowIfNull()`, `ArgumentException.ThrowIfNullOrWhiteSpace()`, etc.
 - Raise domain events in factory methods and critical state changes
 - Encapsulate mutable collections with private backing fields and `IReadOnlyCollection<T>` public properties
@@ -217,7 +218,7 @@ public sealed class MyEntity : AggregateRoot<Guid>
     public required string Name { get; set; }
     public IReadOnlyCollection<string> Items => _items.AsReadOnly();
     public DateTime CreatedAtUtc { get; init; }
-    public DateTime? UpdatedAtUtc { get; set; }
+    public DateTime? UpdatedAtUtc { get; private set; }
 
     private MyEntity() : base() { }
     private MyEntity(Guid id) : base(id) { CreatedAtUtc = DateTime.UtcNow; }

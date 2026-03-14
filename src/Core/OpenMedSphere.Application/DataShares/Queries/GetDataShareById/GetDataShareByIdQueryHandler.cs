@@ -40,7 +40,7 @@ internal sealed class GetDataShareByIdQueryHandler(IDataShareRepository reposito
             Signature = dataShare.Signature,
             SenderKeyVersion = dataShare.SenderKeyVersion,
             RecipientKeyVersion = dataShare.RecipientKeyVersion,
-            Status = dataShare.Status,
+            Status = dataShare.EffectiveStatus,
             SharedAtUtc = dataShare.SharedAtUtc,
             AccessedAtUtc = dataShare.AccessedAtUtc,
             ExpiresAtUtc = dataShare.ExpiresAtUtc

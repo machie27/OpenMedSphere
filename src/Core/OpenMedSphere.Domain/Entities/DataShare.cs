@@ -54,7 +54,7 @@ public sealed class DataShare : AggregateRoot<Guid>
     /// <summary>
     /// Gets the current status of the data share.
     /// </summary>
-    public DataShareStatus Status { get; set; } = DataShareStatus.Pending;
+    public DataShareStatus Status { get; private set; } = DataShareStatus.Pending;
 
     /// <summary>
     /// Gets the date and time when the data was shared.
@@ -66,7 +66,7 @@ public sealed class DataShare : AggregateRoot<Guid>
     /// <summary>
     /// Gets the date and time when the share was accessed by the recipient.
     /// </summary>
-    public DateTime? AccessedAtUtc { get; set; }
+    public DateTime? AccessedAtUtc { get; private set; }
 
     /// <summary>
     /// Gets the date and time when the share expires.
@@ -81,7 +81,7 @@ public sealed class DataShare : AggregateRoot<Guid>
     /// <summary>
     /// Gets the date and time when the share was last updated.
     /// </summary>
-    public DateTime? UpdatedAtUtc { get; set; }
+    public DateTime? UpdatedAtUtc { get; private set; }
 
     /// <summary>
     /// Required for EF Core.
@@ -206,4 +206,11 @@ public sealed class DataShare : AggregateRoot<Guid>
     /// <returns>True if the share has expired; otherwise, false.</returns>
     public bool IsExpired() =>
         ExpiresAtUtc.HasValue && ExpiresAtUtc.Value <= DateTime.UtcNow;
+
+    /// <summary>
+    /// Gets the effective status, reflecting expiry at query time.
+    /// Use this for API responses instead of <see cref="Status"/> directly.
+    /// </summary>
+    public DataShareStatus EffectiveStatus =>
+        IsExpired() && Status is DataShareStatus.Pending ? DataShareStatus.Expired : Status;
 }

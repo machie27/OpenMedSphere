@@ -157,9 +157,9 @@ namespace OpenMedSphere.Application.Tests.DataShares.Commands
             DataShare dataShare = DataShare.Create(
                 SenderId, RecipientId, PatientDataId,
                 "payload", "key", "sig", 1, 1,
-                DateTime.UtcNow.AddMilliseconds(1));
+                DateTime.UtcNow.AddMilliseconds(50));
 
-            Thread.Sleep(10);
+            await Task.Delay(100);
 
             _repositoryMock
                 .Setup(r => r.GetByIdAsync(dataShare.Id, It.IsAny<CancellationToken>()))
