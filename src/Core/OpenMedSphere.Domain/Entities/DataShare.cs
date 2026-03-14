@@ -58,6 +58,8 @@ public sealed class DataShare : AggregateRoot<Guid>
 
     /// <summary>
     /// Gets the date and time when the data was shared.
+    /// Currently set at creation, but kept separate from <see cref="CreatedAtUtc"/>
+    /// to support future draft or scheduled share workflows.
     /// </summary>
     public DateTime SharedAtUtc { get; init; }
 
