@@ -182,7 +182,9 @@ public sealed class DataShare : AggregateRoot<Guid>
     }
 
     /// <summary>
-    /// Revokes the data share.
+    /// Revokes the data share. Can be called on both Pending and Accepted shares —
+    /// a sender may revoke access even after the recipient has accepted, which is
+    /// required for medical data compliance (right to withdraw shared data).
     /// </summary>
     public void Revoke()
     {

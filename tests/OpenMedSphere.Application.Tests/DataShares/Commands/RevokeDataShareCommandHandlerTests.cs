@@ -148,5 +148,32 @@ namespace OpenMedSphere.Application.Tests.DataShares.Commands
             Assert.True(result.IsFailure);
             Assert.Equal(ErrorCode.InvalidOperation, result.ErrorCode);
         }
+
+        [Fact]
+        public async Task HandleAsync_ExpiredShare_ReturnsInvalidOperation()
+        {
+            DataShare dataShare = DataShare.Create(
+                SenderId, RecipientId, PatientDataId,
+                "payload", "key", "sig", 1, 1,
+                DateTime.UtcNow.AddMilliseconds(50));
+
+            await Task.Delay(100, TestContext.Current.CancellationToken);
+
+            _repositoryMock
+                .Setup(r => r.GetByIdAsync(dataShare.Id, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(dataShare);
+
+            RevokeDataShareCommand command = new()
+            {
+                DataShareId = dataShare.Id,
+                ResearcherId = SenderId
+            };
+
+            Result result = await _handler.HandleAsync(command, CancellationToken.None);
+
+            Assert.True(result.IsFailure);
+            Assert.Equal(ErrorCode.InvalidOperation, result.ErrorCode);
+            Assert.Contains("expired", result.Error!, StringComparison.OrdinalIgnoreCase);
+        }
     }
 }
