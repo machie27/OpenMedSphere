@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using OpenMedSphere.API.Extensions;
 using OpenMedSphere.Application.Messaging;
 using OpenMedSphere.Application.Researchers.Commands.RegisterResearcher;
 using OpenMedSphere.Application.Researchers.Commands.UpdateResearcherPublicKeys;
@@ -52,6 +54,7 @@ public static class ResearcherEndpoints
             .WithName("UpdateResearcherPublicKeys")
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status403Forbidden)
             .Produces(StatusCodes.Status404NotFound)
             .RequireRateLimiting("write");
 
@@ -122,9 +125,15 @@ public static class ResearcherEndpoints
     private static async Task<IResult> UpdatePublicKeysAsync(
         Guid id,
         UpdateResearcherPublicKeysRequest request,
+        ClaimsPrincipal user,
         IMediator mediator,
         CancellationToken cancellationToken)
     {
+        if (!user.TryGetResearcherId(out Guid callerId) || callerId != id)
+        {
+            return Results.Forbid();
+        }
+
         UpdateResearcherPublicKeysCommand command = new()
         {
             ResearcherId = id,

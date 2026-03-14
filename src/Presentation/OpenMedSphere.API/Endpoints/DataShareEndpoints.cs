@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using OpenMedSphere.API.Extensions;
 using OpenMedSphere.Application.DataShares.Commands.AcceptDataShare;
 using OpenMedSphere.Application.DataShares.Commands.CreateDataShare;
 using OpenMedSphere.Application.DataShares.Commands.RevokeDataShare;
@@ -72,7 +73,7 @@ public static class DataShareEndpoints
         IMediator mediator,
         CancellationToken cancellationToken)
     {
-        if (!TryGetResearcherId(user, out Guid researcherId))
+        if (!user.TryGetResearcherId(out Guid researcherId))
         {
             return Results.Unauthorized();
         }
@@ -104,7 +105,7 @@ public static class DataShareEndpoints
         IMediator mediator,
         CancellationToken cancellationToken)
     {
-        if (!TryGetResearcherId(user, out Guid researcherId))
+        if (!user.TryGetResearcherId(out Guid researcherId))
         {
             return Results.Unauthorized();
         }
@@ -124,7 +125,7 @@ public static class DataShareEndpoints
         IMediator mediator,
         CancellationToken cancellationToken)
     {
-        if (!TryGetResearcherId(user, out Guid researcherId))
+        if (!user.TryGetResearcherId(out Guid researcherId))
         {
             return Results.Unauthorized();
         }
@@ -145,7 +146,7 @@ public static class DataShareEndpoints
         IMediator mediator,
         CancellationToken cancellationToken)
     {
-        if (!TryGetResearcherId(user, out Guid researcherId))
+        if (!user.TryGetResearcherId(out Guid researcherId))
         {
             return Results.Unauthorized();
         }
@@ -167,7 +168,7 @@ public static class DataShareEndpoints
         IMediator mediator,
         CancellationToken cancellationToken)
     {
-        if (!TryGetResearcherId(user, out Guid researcherId))
+        if (!user.TryGetResearcherId(out Guid researcherId))
         {
             return Results.Unauthorized();
         }
@@ -193,7 +194,7 @@ public static class DataShareEndpoints
         IMediator mediator,
         CancellationToken cancellationToken)
     {
-        if (!TryGetResearcherId(user, out Guid researcherId))
+        if (!user.TryGetResearcherId(out Guid researcherId))
         {
             return Results.Unauthorized();
         }
@@ -213,11 +214,6 @@ public static class DataShareEndpoints
                 : Results.BadRequest(result.Error);
     }
 
-    private static bool TryGetResearcherId(ClaimsPrincipal user, out Guid researcherId)
-    {
-        string? claimValue = user.FindFirstValue(ClaimTypes.NameIdentifier);
-        return Guid.TryParse(claimValue, out researcherId);
-    }
 }
 
 /// <summary>
