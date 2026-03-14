@@ -22,6 +22,9 @@ public enum DataShareStatus
 
     /// <summary>
     /// The data share has expired and is no longer accessible.
+    /// This value is never persisted to the database — it is computed at query time
+    /// via <see cref="Entities.DataShare.EffectiveStatus"/>. Do not query the Status
+    /// column for this value; use ExpiresAtUtc instead.
     /// </summary>
     Expired = 3
 }

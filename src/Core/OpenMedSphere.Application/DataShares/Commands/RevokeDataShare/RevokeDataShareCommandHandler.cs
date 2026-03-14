@@ -35,6 +35,11 @@ internal sealed class RevokeDataShareCommandHandler(
             return Result.InvalidOperation("Data share is already revoked.");
         }
 
+        if (dataShare.IsExpired())
+        {
+            return Result.InvalidOperation("Cannot revoke an expired data share.");
+        }
+
         dataShare.Revoke();
 
         repository.Update(dataShare);
