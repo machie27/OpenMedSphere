@@ -1,3 +1,4 @@
+using OpenMedSphere.Domain.Events;
 using OpenMedSphere.Domain.Primitives;
 using OpenMedSphere.Domain.ValueObjects;
 
@@ -82,6 +83,8 @@ public sealed class Researcher : AggregateRoot<Guid>
             Institution = institution,
             PublicKeys = publicKeys
         };
+
+        researcher.RaiseDomainEvent(new ResearcherCreatedEvent(researcher.Id));
 
         return researcher;
     }

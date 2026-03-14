@@ -1,6 +1,7 @@
 using OpenMedSphere.Application.Abstractions.Data;
 using OpenMedSphere.Application.Messaging;
 using OpenMedSphere.Domain.Entities;
+using OpenMedSphere.Domain.Enums;
 
 namespace OpenMedSphere.Application.DataShares.Commands.AcceptDataShare;
 
@@ -29,14 +30,17 @@ internal sealed class AcceptDataShareCommandHandler(
             return Result.InvalidOperation("Only the recipient can accept a data share.");
         }
 
-        try
+        if (dataShare.Status is not DataShareStatus.Pending)
         {
-            dataShare.Accept();
+            return Result.InvalidOperation($"Cannot accept a data share with status '{dataShare.Status}'.");
         }
-        catch (InvalidOperationException ex)
+
+        if (dataShare.IsExpired())
         {
-            return Result.InvalidOperation(ex.Message);
+            return Result.InvalidOperation("Cannot accept an expired data share.");
         }
+
+        dataShare.Accept();
 
         repository.Update(dataShare);
         await unitOfWork.SaveChangesAsync(cancellationToken);

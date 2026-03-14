@@ -29,6 +29,10 @@ internal sealed class RegisterResearcherCommandValidator : IValidator<RegisterRe
         {
             errors.Add(new ValidationError(nameof(instance.Email), $"Email must not exceed {ValidationConstants.MaxEmailLength} characters."));
         }
+        else if (!System.Net.Mail.MailAddress.TryCreate(instance.Email, out _))
+        {
+            errors.Add(new ValidationError(nameof(instance.Email), "Email must be a valid email address."));
+        }
 
         if (string.IsNullOrWhiteSpace(instance.Institution))
         {

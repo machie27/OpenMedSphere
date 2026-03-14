@@ -1,6 +1,7 @@
 using OpenMedSphere.Application.Abstractions.Data;
 using OpenMedSphere.Application.Messaging;
 using OpenMedSphere.Domain.Entities;
+using OpenMedSphere.Domain.Enums;
 
 namespace OpenMedSphere.Application.DataShares.Commands.RevokeDataShare;
 
@@ -29,14 +30,12 @@ internal sealed class RevokeDataShareCommandHandler(
             return Result.InvalidOperation("Only the sender can revoke a data share.");
         }
 
-        try
+        if (dataShare.Status is DataShareStatus.Revoked)
         {
-            dataShare.Revoke();
+            return Result.InvalidOperation("Data share is already revoked.");
         }
-        catch (InvalidOperationException ex)
-        {
-            return Result.InvalidOperation(ex.Message);
-        }
+
+        dataShare.Revoke();
 
         repository.Update(dataShare);
         await unitOfWork.SaveChangesAsync(cancellationToken);

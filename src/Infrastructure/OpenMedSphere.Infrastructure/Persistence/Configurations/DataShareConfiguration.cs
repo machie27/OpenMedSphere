@@ -19,6 +19,21 @@ internal sealed class DataShareConfiguration : IEntityTypeConfiguration<DataShar
         builder.Property(d => d.RecipientResearcherId).IsRequired();
         builder.Property(d => d.PatientDataId).IsRequired();
 
+        builder.HasOne<Researcher>()
+            .WithMany()
+            .HasForeignKey(d => d.SenderResearcherId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne<Researcher>()
+            .WithMany()
+            .HasForeignKey(d => d.RecipientResearcherId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne<PatientData>()
+            .WithMany()
+            .HasForeignKey(d => d.PatientDataId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.Property(d => d.EncryptedPayload)
             .HasColumnType("text")
             .IsRequired();

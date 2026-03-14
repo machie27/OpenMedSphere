@@ -63,6 +63,11 @@ public sealed record DataShareResponse
     public DateTime SharedAtUtc { get; init; }
 
     /// <summary>
+    /// Gets the accessed date.
+    /// </summary>
+    public DateTime? AccessedAtUtc { get; init; }
+
+    /// <summary>
     /// Gets the expiry date.
     /// </summary>
     public DateTime? ExpiresAtUtc { get; init; }

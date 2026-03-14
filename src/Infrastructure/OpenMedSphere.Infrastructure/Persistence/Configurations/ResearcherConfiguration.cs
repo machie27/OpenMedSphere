@@ -35,18 +35,22 @@ internal sealed class ResearcherConfiguration : IEntityTypeConfiguration<Researc
         {
             keys.Property(k => k.MlKemPublicKey)
                 .HasColumnName("PublicKeys_MlKem")
+                .HasMaxLength(10000)
                 .IsRequired();
 
             keys.Property(k => k.MlDsaPublicKey)
                 .HasColumnName("PublicKeys_MlDsa")
+                .HasMaxLength(10000)
                 .IsRequired();
 
             keys.Property(k => k.X25519PublicKey)
                 .HasColumnName("PublicKeys_X25519")
+                .HasMaxLength(10000)
                 .IsRequired();
 
             keys.Property(k => k.EcdsaPublicKey)
                 .HasColumnName("PublicKeys_Ecdsa")
+                .HasMaxLength(10000)
                 .IsRequired();
 
             keys.Property(k => k.KeyVersion)
