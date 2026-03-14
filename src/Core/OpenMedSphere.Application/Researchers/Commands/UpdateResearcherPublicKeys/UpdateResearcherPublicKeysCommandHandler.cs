@@ -25,6 +25,12 @@ internal sealed class UpdateResearcherPublicKeysCommandHandler(
             return Result.NotFound($"Researcher with ID '{command.ResearcherId}' not found.");
         }
 
+        if (command.KeyVersion <= researcher.PublicKeys.KeyVersion)
+        {
+            return Result.InvalidOperation(
+                $"New key version ({command.KeyVersion}) must be greater than current version ({researcher.PublicKeys.KeyVersion}).");
+        }
+
         var newPublicKeys = PublicKeySet.Create(
             command.MlKemPublicKey,
             command.MlDsaPublicKey,

@@ -26,11 +26,21 @@ internal sealed class CreateDataShareCommandHandler(
             return Result<Guid>.NotFound($"Sender researcher with ID '{command.SenderResearcherId}' not found.");
         }
 
+        if (!sender.IsActive)
+        {
+            return Result<Guid>.InvalidOperation("Sender researcher is not active.");
+        }
+
         var recipient = await researcherRepository.GetByIdAsync(command.RecipientResearcherId, cancellationToken);
 
         if (recipient is null)
         {
             return Result<Guid>.NotFound($"Recipient researcher with ID '{command.RecipientResearcherId}' not found.");
+        }
+
+        if (!recipient.IsActive)
+        {
+            return Result<Guid>.InvalidOperation("Recipient researcher is not active.");
         }
 
         Domain.Entities.PatientData? patientData =

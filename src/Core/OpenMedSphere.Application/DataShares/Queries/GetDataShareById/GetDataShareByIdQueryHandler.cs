@@ -22,6 +22,7 @@ internal sealed class GetDataShareByIdQueryHandler(IDataShareRepository reposito
             return Result<DataShareResponse>.NotFound($"Data share with ID '{query.Id}' not found.");
         }
 
+        // Return NotFound (not Forbidden) to prevent share ID enumeration
         if (dataShare.SenderResearcherId != query.ResearcherId &&
             dataShare.RecipientResearcherId != query.ResearcherId)
         {
