@@ -33,6 +33,8 @@ builder.Services.AddOpenApi(options =>
 });
 builder.AddRedisDistributedCache("cache");
 
+builder.Services.AddProblemDetails();
+
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
@@ -102,6 +104,8 @@ if (app.Environment.IsDevelopment())
     app.MapAuthEndpoints();
 }
 
+app.UseExceptionHandler();
+app.UseStatusCodePages();
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();

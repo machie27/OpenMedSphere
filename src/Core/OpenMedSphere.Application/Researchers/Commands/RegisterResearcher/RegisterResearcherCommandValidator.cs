@@ -43,27 +43,11 @@ internal sealed class RegisterResearcherCommandValidator : IValidator<RegisterRe
             errors.Add(new ValidationError(nameof(instance.Institution), $"Institution must not exceed {ValidationConstants.MaxInstitutionLength} characters."));
         }
 
-        ValidateBase64Key(instance.MlKemPublicKey, nameof(instance.MlKemPublicKey), "ML-KEM public key", errors);
-        ValidateBase64Key(instance.MlDsaPublicKey, nameof(instance.MlDsaPublicKey), "ML-DSA public key", errors);
-        ValidateBase64Key(instance.X25519PublicKey, nameof(instance.X25519PublicKey), "X25519 public key", errors);
-        ValidateBase64Key(instance.EcdsaPublicKey, nameof(instance.EcdsaPublicKey), "ECDSA public key", errors);
+        ValidationConstants.ValidateBase64Field(instance.MlKemPublicKey, nameof(instance.MlKemPublicKey), "ML-KEM public key", ValidationConstants.MaxBase64KeyLength, errors);
+        ValidationConstants.ValidateBase64Field(instance.MlDsaPublicKey, nameof(instance.MlDsaPublicKey), "ML-DSA public key", ValidationConstants.MaxBase64KeyLength, errors);
+        ValidationConstants.ValidateBase64Field(instance.X25519PublicKey, nameof(instance.X25519PublicKey), "X25519 public key", ValidationConstants.MaxBase64KeyLength, errors);
+        ValidationConstants.ValidateBase64Field(instance.EcdsaPublicKey, nameof(instance.EcdsaPublicKey), "ECDSA public key", ValidationConstants.MaxBase64KeyLength, errors);
 
         return Task.FromResult(errors.Count == 0 ? ValidationResult.Success() : new ValidationResult { Errors = errors });
-    }
-
-    private static void ValidateBase64Key(string? value, string propertyName, string displayName, List<ValidationError> errors)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            errors.Add(new ValidationError(propertyName, $"{displayName} is required."));
-        }
-        else if (value.Length > ValidationConstants.MaxBase64KeyLength)
-        {
-            errors.Add(new ValidationError(propertyName, $"{displayName} must not exceed {ValidationConstants.MaxBase64KeyLength} characters."));
-        }
-        else if (!Convert.TryFromBase64String(value, new byte[value.Length], out _))
-        {
-            errors.Add(new ValidationError(propertyName, $"{displayName} must be a valid Base64 string."));
-        }
     }
 }

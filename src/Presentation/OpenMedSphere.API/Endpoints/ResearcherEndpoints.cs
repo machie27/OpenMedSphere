@@ -56,11 +56,15 @@ public static class ResearcherEndpoints
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status403Forbidden)
             .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status422UnprocessableEntity)
             .RequireRateLimiting("write");
 
         return app;
     }
 
+    // Registration is a special case: no researcher ID exists in JWT yet.
+    // Authorization is provided by JWT authentication (RequireAuthorization on the group)
+    // and email uniqueness (DB unique index prevents duplicate registrations).
     private static async Task<IResult> RegisterAsync(
         RegisterResearcherCommand command,
         IMediator mediator,
@@ -68,11 +72,12 @@ public static class ResearcherEndpoints
     {
         Result<Guid> result = await mediator.SendAsync<Guid>(command, cancellationToken);
 
-        return result.IsSuccess
-            ? Results.Created($"/api/researchers/{result.Value}", result.Value)
-            : result.ErrorCode == ErrorCode.Conflict
-                ? Results.Conflict(result.Error)
-                : Results.BadRequest(result.Error);
+        if (result.IsSuccess)
+        {
+            return Results.Created($"/api/researchers/{result.Value}", result.Value);
+        }
+
+        return MapError(result);
     }
 
     private static async Task<IResult> GetByIdAsync(
@@ -84,11 +89,12 @@ public static class ResearcherEndpoints
             new GetResearcherByIdQuery { Id = id },
             cancellationToken);
 
-        return result.IsSuccess
-            ? Results.Ok(result.Value)
-            : result.ErrorCode == ErrorCode.NotFound
-                ? Results.NotFound(result.Error)
-                : Results.BadRequest(result.Error);
+        if (result.IsSuccess)
+        {
+            return Results.Ok(result.Value);
+        }
+
+        return MapError(result);
     }
 
     private static async Task<IResult> GetPublicKeysAsync(
@@ -100,26 +106,32 @@ public static class ResearcherEndpoints
             new GetResearcherPublicKeysQuery { Id = id },
             cancellationToken);
 
-        return result.IsSuccess
-            ? Results.Ok(result.Value)
-            : result.ErrorCode == ErrorCode.NotFound
-                ? Results.NotFound(result.Error)
-                : Results.BadRequest(result.Error);
+        if (result.IsSuccess)
+        {
+            return Results.Ok(result.Value);
+        }
+
+        return MapError(result);
     }
 
     private static async Task<IResult> SearchAsync(
         string query,
         IMediator mediator,
-        CancellationToken cancellationToken)
+        int page = 1,
+        int pageSize = 20,
+        CancellationToken cancellationToken = default)
     {
         Result<IReadOnlyList<ResearcherSummaryResponse>> result =
             await mediator.QueryAsync<IReadOnlyList<ResearcherSummaryResponse>>(
-                new SearchResearchersQuery { Query = query },
+                new SearchResearchersQuery { Query = query, Page = page, PageSize = pageSize },
                 cancellationToken);
 
-        return result.IsSuccess
-            ? Results.Ok(result.Value)
-            : Results.BadRequest(result.Error);
+        if (result.IsSuccess)
+        {
+            return Results.Ok(result.Value);
+        }
+
+        return MapError(result);
     }
 
     private static async Task<IResult> UpdatePublicKeysAsync(
@@ -129,7 +141,12 @@ public static class ResearcherEndpoints
         IMediator mediator,
         CancellationToken cancellationToken)
     {
-        if (!user.TryGetResearcherId(out Guid callerId) || callerId != id)
+        if (!user.TryGetResearcherId(out Guid callerId))
+        {
+            return Results.Unauthorized();
+        }
+
+        if (callerId != id)
         {
             return Results.Forbid();
         }
@@ -146,12 +163,22 @@ public static class ResearcherEndpoints
 
         Result result = await mediator.SendAsync(command, cancellationToken);
 
-        return result.IsSuccess
-            ? Results.NoContent()
-            : result.ErrorCode == ErrorCode.NotFound
-                ? Results.NotFound(result.Error)
-                : Results.BadRequest(result.Error);
+        if (result.IsSuccess)
+        {
+            return Results.NoContent();
+        }
+
+        return MapError(result);
     }
+
+    private static IResult MapError(Result result) =>
+        result.ErrorCode switch
+        {
+            ErrorCode.NotFound => Results.NotFound(result.Error),
+            ErrorCode.Conflict => Results.Conflict(result.Error),
+            ErrorCode.InvalidOperation => Results.UnprocessableEntity(result.Error),
+            _ => Results.BadRequest(result.Error)
+        };
 }
 
 /// <summary>

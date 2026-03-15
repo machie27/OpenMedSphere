@@ -88,5 +88,40 @@ namespace OpenMedSphere.Application.Tests.Researchers.Commands
                 r => r.AddAsync(It.IsAny<Researcher>(), It.IsAny<CancellationToken>()),
                 Times.Never);
         }
+
+        [Fact]
+        public async Task HandleAsync_ConcurrentDuplicateEmail_ReturnsConflict()
+        {
+            _repositoryMock
+                .Setup(r => r.GetByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((Researcher?)null);
+
+            _unitOfWorkMock
+                .Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new DbUpdateException(
+                    "Cannot insert duplicate key row in object 'dbo.Researchers' with unique index 'IX_Researchers_Email'."));
+
+            RegisterResearcherCommand command = new()
+            {
+                Name = "Dr. Smith",
+                Email = "smith@university.edu",
+                Institution = "MIT",
+                MlKemPublicKey = "mlKemKey",
+                MlDsaPublicKey = "mlDsaKey",
+                X25519PublicKey = "x25519Key",
+                EcdsaPublicKey = "ecdsaKey"
+            };
+
+            Result<Guid> result = await _handler.HandleAsync(command, CancellationToken.None);
+
+            Assert.True(result.IsFailure);
+            Assert.Equal(ErrorCode.Conflict, result.ErrorCode);
+            Assert.Contains("smith@university.edu", result.Error!);
+        }
+
+        private class DbUpdateException : Exception
+        {
+            public DbUpdateException(string message) : base(message) { }
+        }
     }
 }

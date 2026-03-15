@@ -15,7 +15,10 @@ internal sealed class SearchResearchersQueryHandler(IResearcherRepository reposi
         SearchResearchersQuery query,
         CancellationToken cancellationToken = default)
     {
-        IReadOnlyList<Researcher> researchers = await repository.SearchAsync(query.Query, cancellationToken);
+        var skip = (query.Page - 1) * query.PageSize;
+
+        IReadOnlyList<Researcher> researchers = await repository.SearchAsync(
+            query.Query, skip, query.PageSize, cancellationToken);
 
         IReadOnlyList<ResearcherSummaryResponse> response = researchers
             .Select(r => new ResearcherSummaryResponse

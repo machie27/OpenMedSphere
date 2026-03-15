@@ -53,7 +53,8 @@ public sealed record DataShareResponse
     public required int RecipientKeyVersion { get; init; }
 
     /// <summary>
-    /// Gets the status.
+    /// Gets the effective status, reflecting expiry at query time.
+    /// Populated from <c>DataShare.EffectiveStatus</c> rather than the raw persisted Status.
     /// </summary>
     public required DataShareStatus Status { get; init; }
 
@@ -99,7 +100,8 @@ public sealed record DataShareSummaryResponse
     public required Guid PatientDataId { get; init; }
 
     /// <summary>
-    /// Gets the status.
+    /// Gets the effective status, reflecting expiry at query time.
+    /// Populated from <c>DataShare.EffectiveStatus</c> rather than the raw persisted Status.
     /// </summary>
     public required DataShareStatus Status { get; init; }
 

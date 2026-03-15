@@ -16,10 +16,13 @@ public interface IResearcherRepository : IRepository<Researcher, Guid>
     Task<Researcher?> GetByEmailAsync(string email, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Searches researchers by name, email, or institution.
+    /// Searches active researchers by name, email, or institution, ordered by most recent first.
     /// </summary>
     /// <param name="query">The search query.</param>
+    /// <param name="skip">The number of results to skip.</param>
+    /// <param name="take">The number of results to take.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>Researchers matching the query.</returns>
-    Task<IReadOnlyList<Researcher>> SearchAsync(string query, CancellationToken cancellationToken = default);
+    /// <returns>Active researchers matching the query.</returns>
+    Task<IReadOnlyList<Researcher>> SearchAsync(
+        string query, int skip, int take, CancellationToken cancellationToken = default);
 }

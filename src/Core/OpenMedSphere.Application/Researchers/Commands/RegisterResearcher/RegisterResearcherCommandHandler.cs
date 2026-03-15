@@ -47,6 +47,8 @@ internal sealed class RegisterResearcherCommandHandler(
             // Unique index violation from concurrent insert — the optimistic check above
             // handles the common case; this catches the rare race condition.
             // DbUpdateException checked by name to avoid an EF Core dependency in Application.
+            // IMPORTANT: The index name 'IX_Researchers_Email' must match the name in
+            // ResearcherConfiguration. If the index is renamed, update this string to match.
             return Result<Guid>.Conflict($"A researcher with email '{command.Email}' already exists.");
         }
 

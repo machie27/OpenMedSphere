@@ -118,7 +118,7 @@ internal sealed class AuditSaveChangesInterceptor : SaveChangesInterceptor
 
             string propertyName = property.Metadata.Name;
 
-            if (ExcludedFromAudit.Contains(propertyName))
+            if (entry.Entity is DataShare && ExcludedFromAudit.Contains(propertyName))
             {
                 continue;
             }

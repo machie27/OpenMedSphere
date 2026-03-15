@@ -91,10 +91,19 @@ public sealed class Researcher : AggregateRoot<Guid>
 
     /// <summary>
     /// Rotates the researcher's public keys to a new version.
+    /// The new key set must have a version number strictly greater than the current version
+    /// to enforce monotonic key versioning.
     /// </summary>
     /// <param name="newPublicKeys">The new public key set.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the researcher account is inactive.</exception>
+    /// <exception cref="ArgumentException">Thrown when the new key version is not greater than the current version.</exception>
     public void RotateKeys(PublicKeySet newPublicKeys)
     {
+        if (!IsActive)
+        {
+            throw new InvalidOperationException("Cannot rotate keys for an inactive researcher.");
+        }
+
         ArgumentNullException.ThrowIfNull(newPublicKeys);
 
         if (newPublicKeys.KeyVersion <= PublicKeys.KeyVersion)
@@ -117,8 +126,14 @@ public sealed class Researcher : AggregateRoot<Guid>
     /// <param name="name">The new name.</param>
     /// <param name="email">The new email address.</param>
     /// <param name="institution">The new institution.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the researcher account is inactive.</exception>
     public void UpdateProfile(string name, string email, string institution)
     {
+        if (!IsActive)
+        {
+            throw new InvalidOperationException("Cannot update profile for an inactive researcher.");
+        }
+
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ArgumentException.ThrowIfNullOrWhiteSpace(email);
         ArgumentException.ThrowIfNullOrWhiteSpace(institution);
@@ -130,20 +145,34 @@ public sealed class Researcher : AggregateRoot<Guid>
     }
 
     /// <summary>
-    /// Deactivates the researcher account.
+    /// Deactivates the researcher account. No-op if already inactive.
     /// </summary>
     public void Deactivate()
     {
+        if (!IsActive)
+        {
+            return;
+        }
+
         IsActive = false;
         UpdatedAtUtc = DateTime.UtcNow;
+
+        RaiseDomainEvent(new ResearcherDeactivatedEvent(Id));
     }
 
     /// <summary>
-    /// Activates the researcher account.
+    /// Activates the researcher account. No-op if already active.
     /// </summary>
     public void Activate()
     {
+        if (IsActive)
+        {
+            return;
+        }
+
         IsActive = true;
         UpdatedAtUtc = DateTime.UtcNow;
+
+        RaiseDomainEvent(new ResearcherActivatedEvent(Id));
     }
 }

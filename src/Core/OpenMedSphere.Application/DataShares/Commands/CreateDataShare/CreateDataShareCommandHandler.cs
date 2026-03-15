@@ -43,12 +43,16 @@ internal sealed class CreateDataShareCommandHandler(
             return Result<Guid>.InvalidOperation("Recipient researcher is not active.");
         }
 
-        Domain.Entities.PatientData? patientData =
-            await patientDataRepository.GetByIdAsync(command.PatientDataId, cancellationToken);
+        var patientData = await patientDataRepository.GetByIdAsync(command.PatientDataId, cancellationToken);
 
         if (patientData is null)
         {
             return Result<Guid>.NotFound($"Patient data with ID '{command.PatientDataId}' not found.");
+        }
+
+        if (command.ExpiresAtUtc.HasValue && command.ExpiresAtUtc.Value <= DateTime.UtcNow)
+        {
+            return Result<Guid>.InvalidOperation("Expiry date must be in the future.");
         }
 
         var dataShare = DataShare.Create(

@@ -32,6 +32,7 @@ public static class DataShareEndpoints
             .Produces<Guid>(StatusCodes.Status201Created)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status422UnprocessableEntity)
             .RequireRateLimiting("write");
 
         group.MapGet("/incoming", GetIncomingAsync)
@@ -55,6 +56,7 @@ public static class DataShareEndpoints
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status422UnprocessableEntity)
             .RequireRateLimiting("write");
 
         group.MapDelete("/{id:guid}", RevokeAsync)
@@ -62,6 +64,7 @@ public static class DataShareEndpoints
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status422UnprocessableEntity)
             .RequireRateLimiting("write");
 
         return app;
@@ -93,11 +96,12 @@ public static class DataShareEndpoints
 
         Result<Guid> result = await mediator.SendAsync<Guid>(command, cancellationToken);
 
-        return result.IsSuccess
-            ? Results.Created($"/api/data-shares/{result.Value}", result.Value)
-            : result.ErrorCode == ErrorCode.NotFound
-                ? Results.NotFound(result.Error)
-                : Results.BadRequest(result.Error);
+        if (result.IsSuccess)
+        {
+            return Results.Created($"/api/data-shares/{result.Value}", result.Value);
+        }
+
+        return MapError(result);
     }
 
     private static async Task<IResult> GetIncomingAsync(
@@ -117,9 +121,12 @@ public static class DataShareEndpoints
                 new GetIncomingSharesQuery { ResearcherId = researcherId, Page = page, PageSize = pageSize },
                 cancellationToken);
 
-        return result.IsSuccess
-            ? Results.Ok(result.Value)
-            : Results.BadRequest(result.Error);
+        if (result.IsSuccess)
+        {
+            return Results.Ok(result.Value);
+        }
+
+        return MapError(result);
     }
 
     private static async Task<IResult> GetOutgoingAsync(
@@ -139,9 +146,12 @@ public static class DataShareEndpoints
                 new GetOutgoingSharesQuery { ResearcherId = researcherId, Page = page, PageSize = pageSize },
                 cancellationToken);
 
-        return result.IsSuccess
-            ? Results.Ok(result.Value)
-            : Results.BadRequest(result.Error);
+        if (result.IsSuccess)
+        {
+            return Results.Ok(result.Value);
+        }
+
+        return MapError(result);
     }
 
     private static async Task<IResult> GetByIdAsync(
@@ -159,11 +169,12 @@ public static class DataShareEndpoints
             new GetDataShareByIdQuery { Id = id, ResearcherId = researcherId },
             cancellationToken);
 
-        return result.IsSuccess
-            ? Results.Ok(result.Value)
-            : result.ErrorCode == ErrorCode.NotFound
-                ? Results.NotFound(result.Error)
-                : Results.BadRequest(result.Error);
+        if (result.IsSuccess)
+        {
+            return Results.Ok(result.Value);
+        }
+
+        return MapError(result);
     }
 
     private static async Task<IResult> AcceptAsync(
@@ -185,11 +196,12 @@ public static class DataShareEndpoints
 
         Result result = await mediator.SendAsync(command, cancellationToken);
 
-        return result.IsSuccess
-            ? Results.NoContent()
-            : result.ErrorCode == ErrorCode.NotFound
-                ? Results.NotFound(result.Error)
-                : Results.BadRequest(result.Error);
+        if (result.IsSuccess)
+        {
+            return Results.NoContent();
+        }
+
+        return MapError(result);
     }
 
     private static async Task<IResult> RevokeAsync(
@@ -211,13 +223,22 @@ public static class DataShareEndpoints
 
         Result result = await mediator.SendAsync(command, cancellationToken);
 
-        return result.IsSuccess
-            ? Results.NoContent()
-            : result.ErrorCode == ErrorCode.NotFound
-                ? Results.NotFound(result.Error)
-                : Results.BadRequest(result.Error);
+        if (result.IsSuccess)
+        {
+            return Results.NoContent();
+        }
+
+        return MapError(result);
     }
 
+    private static IResult MapError(Result result) =>
+        result.ErrorCode switch
+        {
+            ErrorCode.NotFound => Results.NotFound(result.Error),
+            ErrorCode.Conflict => Results.Conflict(result.Error),
+            ErrorCode.InvalidOperation => Results.UnprocessableEntity(result.Error),
+            _ => Results.BadRequest(result.Error)
+        };
 }
 
 /// <summary>

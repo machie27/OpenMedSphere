@@ -54,7 +54,9 @@ OpenMedSphere.Domain/
 │   ├── ResearcherKeyRotatedEvent.cs  # Raised on public key rotation (old + new version)
 │   ├── PatientDataSharedEvent.cs     # Raised when data is shared
 │   ├── DataShareAccessedEvent.cs     # Raised when share is accepted
-│   └── DataShareRevokedEvent.cs      # Raised when share is revoked
+│   ├── DataShareRevokedEvent.cs      # Raised when share is revoked
+│   ├── ResearcherDeactivatedEvent.cs  # Raised on researcher deactivation
+│   └── ResearcherActivatedEvent.cs    # Raised on researcher activation
 ├── ValueObjects/
 │   ├── PatientIdentifier.cs    # Anonymized patient ID (record type)
 │   ├── DateRange.cs            # Date range with validation (record type)
@@ -84,7 +86,7 @@ The codebase is designed to implement:
 - **Specification pattern** for complex queries
 - **Unit of Work pattern** for managing transactions
 - **Inbox/Outbox pattern** for distributed transactions
-- **Mediator pattern** for decoupling components (custom implementation with reflection caching)
+- **Mediator pattern** for decoupling components (custom implementation with reflection caching; catches `TargetInvocationException` and unwraps via `ExceptionDispatchInfo` to preserve original exception type and stack trace)
 - **Validation pipeline** integrated into the mediator (custom `IValidator<T>`)
 - **Factory, Adapter, Observer, and Builder patterns** as appropriate
 
@@ -210,6 +212,8 @@ Follow the established patterns in existing entities:
 - Validate inputs using `ArgumentNullException.ThrowIfNull()`, `ArgumentException.ThrowIfNullOrWhiteSpace()`, etc.
 - Raise domain events in factory methods and critical state changes
 - Encapsulate mutable collections with private backing fields and `IReadOnlyCollection<T>` public properties
+- Domain methods that mutate state (e.g., `RotateKeys`, `UpdateProfile`) should guard `IsActive` at the domain level, not just in handlers
+- Lifecycle methods (`Deactivate`/`Activate`) should be idempotent (no-op if already in target state) and raise domain events
 
 Example:
 ```csharp
@@ -242,14 +246,24 @@ public sealed class MyEntity : AggregateRoot<Guid>
 - Use simple `if` checks that add `ValidationError` entries
 - Validators return `ValidationResult` (not exceptions)
 - Every command should have a validator — even if it only checks for empty GUIDs
-- Use built-in .NET validation where possible (e.g., `MailAddress.TryCreate` for email, `Convert.TryFromBase64String` for Base64 fields)
+- Use built-in .NET validation where possible (e.g., `MailAddress.TryCreate` for email, `Base64.IsValid()` for Base64 fields)
+- For Base64 validation, use `ValidationConstants.ValidateBase64Field()` — shared helper that avoids large allocations
+- NEVER use `Convert.TryFromBase64String(value, new byte[value.Length], out _)` — allocates a full decode buffer
 
 ### Command Handler Patterns
 - Check preconditions (status, permissions, active state) before calling domain methods
 - Return `Result.InvalidOperation()` for failed preconditions — do NOT catch domain exceptions for control flow
 - Validate entity exists → check authorization → check active state → check domain state → perform action
 - Always check `IsActive` before mutations (e.g., key rotation, share creation)
+- For time-sensitive preconditions (e.g., expiry dates), check at both validator AND handler level to avoid TOCTOU races
+- Handler preconditions must be a superset of domain method guards — if the domain throws, it escapes as an unhandled 500
 - Use `Guid.CreateVersion7()` for all new entity IDs (better index performance, time-sortable)
+
+### API Endpoint Patterns
+- Use `if`/`else` with a `MapError()` switch expression — avoid nested ternary operators for Result-to-IResult mapping
+- Map `ErrorCode.NotFound` → 404, `ErrorCode.Conflict` → 409, `ErrorCode.InvalidOperation` → 422, `ErrorCode.ValidationFailed` → 400
+- Separate `TryGetResearcherId` failures (401 Unauthorized) from ID mismatch (403 Forbid) — do not conflate
+- All list/search endpoints must be paginated (default 20, max 100) — never return unbounded result sets
 
 ### Testing Conventions
 - **Framework**: xUnit v3 for all tests
@@ -331,6 +345,7 @@ AppHost uses User Secrets for local development:
 ### Audit Logging
 - EF Core `SaveChangesInterceptor` tracks changes to `PatientData`, `ResearchStudy`, `AnonymizationPolicy`, `Researcher`, and `DataShare` entities
 - Records entity type, ID, action (Created/Modified/Deleted), old/new values as JSON, and timestamp
+- Encrypted fields (`EncryptedPayload`, `EncapsulatedKey`, `Signature`) are excluded from audit — exclusion is scoped to `DataShare` entity type
 - Stored in the `AuditLog` table
 
 ## CI/CD
@@ -348,6 +363,7 @@ GitHub Actions workflow (`.github/workflows/pr-validation.yml`):
 - Aspire orchestration with AppHost (API + PostgreSQL + Redis with health checks)
 - ServiceDefaults with OpenTelemetry, health checks, resilience
 - API with OpenAPI support and Scalar API reference
+- Global error handling via `ProblemDetails` + `UseExceptionHandler()` to prevent raw stack traces in production
 - **Domain Layer (complete):**
   - Aggregate roots: `PatientData`, `ResearchStudy`, `AnonymizationPolicy`, `Researcher`, `DataShare`, `AuditLogEntry`
   - Value objects: `PatientIdentifier`, `DateRange`, `StudyCode`, `MedicalCode`, `PublicKeySet`
@@ -380,17 +396,18 @@ GitHub Actions workflow (`.github/workflows/pr-validation.yml`):
   - CQRS commands: RegisterResearcher, UpdatePublicKeys, CreateDataShare, AcceptDataShare, RevokeDataShare
   - Full lifecycle: create → accept → revoke with domain events
   - Expiry: computed at query time via `EffectiveStatus` (only Pending → Expired; Accepted shares stay Accepted past expiry — clients inspect `ExpiresAtUtc` directly)
+  - Revocation: Accepted shares can be revoked even past expiry (medical data compliance — right to withdraw). Only expired *Pending* shares block revocation.
   - Authorization via JWT claims (researcher ID extracted from `NameIdentifier` claim, not request parameters)
   - Active status checks on sender/recipient during share creation and key rotation
   - Base64 format validation on all cryptographic fields (public keys, encrypted payload, encapsulated key, signature)
   - Paginated incoming/outgoing share list endpoints (default 20, max 100)
   - Handler-level precondition checks for state transitions (no exception-driven control flow)
-- **Testing (183 tests: 135 domain + 48 application):**
+- **Testing (223 tests: 148 domain + 75 application):**
   - Domain entity tests (PatientData, ResearchStudy, AnonymizationPolicy, Researcher, DataShare)
   - Value object tests (PatientIdentifier, DateRange, StudyCode, MedicalCode, PublicKeySet)
   - Command handler tests with Moq (CreatePatientData, AnonymizePatientData, CreateResearchStudy, CreateAnonymizationPolicy, RegisterResearcher, CreateDataShare, AcceptDataShare, RevokeDataShare, UpdateResearcherPublicKeys)
   - Query handler tests (GetDataShareById — authorization, non-participant rejection, effective status)
-  - Validator tests (CreatePatientDataCommandValidator)
+  - Validator tests (CreatePatientDataCommandValidator, CreateDataShareCommandValidator, RegisterResearcherCommandValidator, UpdateResearcherPublicKeysCommandValidator)
 
 **Planned (Not Yet Implemented):**
 - React + Vite + TypeScript frontend (Blazor WASM has been removed)

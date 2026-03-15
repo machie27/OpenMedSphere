@@ -37,7 +37,7 @@ public sealed class DataShare : AggregateRoot<Guid>
     public required string EncapsulatedKey { get; init; }
 
     /// <summary>
-    /// Gets the Base64-encoded hybrid signature (ECDSA + ML-DSA-65).
+    /// Gets the Base64-encoded hybrid signature (ML-DSA-65 + ECDSA).
     /// </summary>
     public required string Signature { get; init; }
 
@@ -162,6 +162,7 @@ public sealed class DataShare : AggregateRoot<Guid>
     /// <summary>
     /// Accepts the data share, marking it as accessed by the recipient.
     /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown when the share is not in Pending status or has expired.</exception>
     public void Accept()
     {
         if (Status is not DataShareStatus.Pending)
@@ -186,6 +187,7 @@ public sealed class DataShare : AggregateRoot<Guid>
     /// a sender may revoke access even after the recipient has accepted, which is
     /// required for medical data compliance (right to withdraw shared data).
     /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown when the share is already revoked or is an expired Pending share.</exception>
     public void Revoke()
     {
         if (Status is DataShareStatus.Revoked)
@@ -193,7 +195,7 @@ public sealed class DataShare : AggregateRoot<Guid>
             throw new InvalidOperationException("Data share is already revoked.");
         }
 
-        if (IsExpired())
+        if (Status is DataShareStatus.Pending && IsExpired())
         {
             throw new InvalidOperationException("Cannot revoke an expired data share.");
         }

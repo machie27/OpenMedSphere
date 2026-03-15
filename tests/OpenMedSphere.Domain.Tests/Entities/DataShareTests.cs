@@ -202,5 +202,66 @@ namespace OpenMedSphere.Domain.Tests.Entities
 
             Assert.False(share.IsExpired());
         }
+
+        [Fact]
+        public async Task Accept_WhenExpired_ThrowsInvalidOperationException()
+        {
+            var share = CreateTestShare(DateTime.UtcNow.AddMilliseconds(50));
+
+            await Task.Delay(100, TestContext.Current.CancellationToken);
+
+            Assert.Throws<InvalidOperationException>(() => share.Accept());
+        }
+
+        [Fact]
+        public void EffectiveStatus_PendingAndNotExpired_ReturnsPending()
+        {
+            var share = CreateTestShare(DateTime.UtcNow.AddHours(1));
+
+            Assert.Equal(DataShareStatus.Pending, share.EffectiveStatus);
+        }
+
+        [Fact]
+        public async Task EffectiveStatus_PendingAndExpired_ReturnsExpired()
+        {
+            var share = CreateTestShare(DateTime.UtcNow.AddMilliseconds(50));
+
+            await Task.Delay(100, TestContext.Current.CancellationToken);
+
+            Assert.Equal(DataShareStatus.Expired, share.EffectiveStatus);
+        }
+
+        [Fact]
+        public async Task EffectiveStatus_AcceptedAndExpired_ReturnsAccepted()
+        {
+            var share = CreateTestShare(DateTime.UtcNow.AddMilliseconds(50));
+            share.Accept();
+
+            await Task.Delay(100, TestContext.Current.CancellationToken);
+
+            Assert.Equal(DataShareStatus.Accepted, share.EffectiveStatus);
+        }
+
+        [Fact]
+        public void EffectiveStatus_Revoked_ReturnsRevoked()
+        {
+            var share = CreateTestShare();
+            share.Revoke();
+
+            Assert.Equal(DataShareStatus.Revoked, share.EffectiveStatus);
+        }
+
+        [Fact]
+        public async Task Revoke_WhenAcceptedAndExpired_SetsStatusToRevoked()
+        {
+            var share = CreateTestShare(DateTime.UtcNow.AddMilliseconds(50));
+            share.Accept();
+
+            await Task.Delay(100, TestContext.Current.CancellationToken);
+
+            share.Revoke();
+
+            Assert.Equal(DataShareStatus.Revoked, share.Status);
+        }
     }
 }

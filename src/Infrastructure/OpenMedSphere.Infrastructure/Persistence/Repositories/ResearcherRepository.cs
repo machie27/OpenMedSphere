@@ -21,6 +21,8 @@ internal sealed class ResearcherRepository(ApplicationDbContext dbContext)
     // Current LOWER(col) LIKE '%x%' cannot use B-tree indexes and scans the full table.
     public async Task<IReadOnlyList<Researcher>> SearchAsync(
         string query,
+        int skip,
+        int take,
         CancellationToken cancellationToken = default)
     {
         var queryLower = query.ToLower();
@@ -30,6 +32,9 @@ internal sealed class ResearcherRepository(ApplicationDbContext dbContext)
                         (r.Name.ToLower().Contains(queryLower) ||
                          r.Email.ToLower().Contains(queryLower) ||
                          r.Institution.ToLower().Contains(queryLower)))
+            .OrderByDescending(r => r.CreatedAtUtc)
+            .Skip(skip)
+            .Take(take)
             .ToListAsync(cancellationToken);
     }
 }

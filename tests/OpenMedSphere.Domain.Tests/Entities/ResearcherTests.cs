@@ -161,5 +161,85 @@ namespace OpenMedSphere.Domain.Tests.Entities
 
             Assert.True(researcher.IsActive);
         }
+
+        [Fact]
+        public void Create_WithValidArguments_RaisesResearcherCreatedEvent()
+        {
+            var researcher = Researcher.Create("Dr. Smith", "email@test.com", "MIT", CreateTestKeys());
+
+            Assert.Single(researcher.DomainEvents);
+            var domainEvent = Assert.IsType<ResearcherCreatedEvent>(researcher.DomainEvents.First());
+            Assert.Equal(researcher.Id, domainEvent.ResearcherId);
+        }
+
+        [Fact]
+        public void RotateKeys_WhenInactive_ThrowsInvalidOperationException()
+        {
+            var researcher = Researcher.Create("Dr. Smith", "email@test.com", "MIT", CreateTestKeys());
+            researcher.Deactivate();
+
+            Assert.Throws<InvalidOperationException>(() =>
+                researcher.RotateKeys(CreateTestKeys(2)));
+        }
+
+        [Fact]
+        public void UpdateProfile_WhenInactive_ThrowsInvalidOperationException()
+        {
+            var researcher = Researcher.Create("Dr. Smith", "email@test.com", "MIT", CreateTestKeys());
+            researcher.Deactivate();
+
+            Assert.Throws<InvalidOperationException>(() =>
+                researcher.UpdateProfile("Dr. Jones", "jones@harvard.edu", "Harvard"));
+        }
+
+        [Fact]
+        public void Deactivate_RaisesResearcherDeactivatedEvent()
+        {
+            var researcher = Researcher.Create("Dr. Smith", "email@test.com", "MIT", CreateTestKeys());
+            researcher.ClearDomainEvents();
+
+            researcher.Deactivate();
+
+            Assert.Single(researcher.DomainEvents);
+            Assert.IsType<ResearcherDeactivatedEvent>(researcher.DomainEvents.First());
+        }
+
+        [Fact]
+        public void Activate_RaisesResearcherActivatedEvent()
+        {
+            var researcher = Researcher.Create("Dr. Smith", "email@test.com", "MIT", CreateTestKeys());
+            researcher.Deactivate();
+            researcher.ClearDomainEvents();
+
+            researcher.Activate();
+
+            Assert.Single(researcher.DomainEvents);
+            Assert.IsType<ResearcherActivatedEvent>(researcher.DomainEvents.First());
+        }
+
+        [Fact]
+        public void Deactivate_WhenAlreadyInactive_IsNoOp()
+        {
+            var researcher = Researcher.Create("Dr. Smith", "email@test.com", "MIT", CreateTestKeys());
+            researcher.Deactivate();
+            var updatedAt = researcher.UpdatedAtUtc;
+            researcher.ClearDomainEvents();
+
+            researcher.Deactivate();
+
+            Assert.Empty(researcher.DomainEvents);
+            Assert.Equal(updatedAt, researcher.UpdatedAtUtc);
+        }
+
+        [Fact]
+        public void Activate_WhenAlreadyActive_IsNoOp()
+        {
+            var researcher = Researcher.Create("Dr. Smith", "email@test.com", "MIT", CreateTestKeys());
+            researcher.ClearDomainEvents();
+
+            researcher.Activate();
+
+            Assert.Empty(researcher.DomainEvents);
+        }
     }
 }
