@@ -217,6 +217,9 @@ public sealed class DataShare : AggregateRoot<Guid>
     /// <summary>
     /// Gets the effective status, reflecting expiry at query time.
     /// Use this for API responses instead of <see cref="Status"/> directly.
+    /// Only Pending shares transition to Expired — an Accepted share past its <see cref="ExpiresAtUtc"/>
+    /// remains Accepted (the data was already accessed). Clients should inspect
+    /// <see cref="ExpiresAtUtc"/> directly to determine whether the access window is still open.
     /// </summary>
     public DataShareStatus EffectiveStatus =>
         IsExpired() && Status is DataShareStatus.Pending ? DataShareStatus.Expired : Status;

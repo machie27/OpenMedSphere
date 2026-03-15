@@ -32,32 +32,9 @@ internal sealed class CreateDataShareCommandValidator : IValidator<CreateDataSha
             errors.Add(new ValidationError(nameof(instance.PatientDataId), "Patient data ID is required."));
         }
 
-        if (string.IsNullOrWhiteSpace(instance.EncryptedPayload))
-        {
-            errors.Add(new ValidationError(nameof(instance.EncryptedPayload), "Encrypted payload is required."));
-        }
-        else if (instance.EncryptedPayload.Length > ValidationConstants.MaxEncryptedPayloadLength)
-        {
-            errors.Add(new ValidationError(nameof(instance.EncryptedPayload), $"Encrypted payload must not exceed {ValidationConstants.MaxEncryptedPayloadLength} characters."));
-        }
-
-        if (string.IsNullOrWhiteSpace(instance.EncapsulatedKey))
-        {
-            errors.Add(new ValidationError(nameof(instance.EncapsulatedKey), "Encapsulated key is required."));
-        }
-        else if (instance.EncapsulatedKey.Length > ValidationConstants.MaxEncapsulatedKeyLength)
-        {
-            errors.Add(new ValidationError(nameof(instance.EncapsulatedKey), $"Encapsulated key must not exceed {ValidationConstants.MaxEncapsulatedKeyLength} characters."));
-        }
-
-        if (string.IsNullOrWhiteSpace(instance.Signature))
-        {
-            errors.Add(new ValidationError(nameof(instance.Signature), "Signature is required."));
-        }
-        else if (instance.Signature.Length > ValidationConstants.MaxSignatureLength)
-        {
-            errors.Add(new ValidationError(nameof(instance.Signature), $"Signature must not exceed {ValidationConstants.MaxSignatureLength} characters."));
-        }
+        ValidateBase64Field(instance.EncryptedPayload, nameof(instance.EncryptedPayload), "Encrypted payload", ValidationConstants.MaxEncryptedPayloadLength, errors);
+        ValidateBase64Field(instance.EncapsulatedKey, nameof(instance.EncapsulatedKey), "Encapsulated key", ValidationConstants.MaxEncapsulatedKeyLength, errors);
+        ValidateBase64Field(instance.Signature, nameof(instance.Signature), "Signature", ValidationConstants.MaxSignatureLength, errors);
 
         if (instance.SenderKeyVersion < 1)
         {
@@ -75,5 +52,21 @@ internal sealed class CreateDataShareCommandValidator : IValidator<CreateDataSha
         }
 
         return Task.FromResult(errors.Count == 0 ? ValidationResult.Success() : new ValidationResult { Errors = errors });
+    }
+
+    private static void ValidateBase64Field(string? value, string propertyName, string displayName, int maxLength, List<ValidationError> errors)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            errors.Add(new ValidationError(propertyName, $"{displayName} is required."));
+        }
+        else if (value.Length > maxLength)
+        {
+            errors.Add(new ValidationError(propertyName, $"{displayName} must not exceed {maxLength} characters."));
+        }
+        else if (!Convert.TryFromBase64String(value, new byte[value.Length], out _))
+        {
+            errors.Add(new ValidationError(propertyName, $"{displayName} must be a valid Base64 string."));
+        }
     }
 }

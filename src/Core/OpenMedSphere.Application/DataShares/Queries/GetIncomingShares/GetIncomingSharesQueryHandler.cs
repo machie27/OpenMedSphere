@@ -15,8 +15,11 @@ internal sealed class GetIncomingSharesQueryHandler(IDataShareRepository reposit
         GetIncomingSharesQuery query,
         CancellationToken cancellationToken = default)
     {
+        var page = Math.Max(query.Page, 1);
+        var pageSize = Math.Clamp(query.PageSize, 1, 100);
+
         IReadOnlyList<DataShare> shares =
-            await repository.GetIncomingSharesAsync(query.ResearcherId, cancellationToken);
+            await repository.GetIncomingSharesAsync(query.ResearcherId, (page - 1) * pageSize, pageSize, cancellationToken);
 
         IReadOnlyList<DataShareSummaryResponse> response = shares
             .Select(s => new DataShareSummaryResponse

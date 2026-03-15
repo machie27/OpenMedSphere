@@ -51,6 +51,7 @@ OpenMedSphere.Domain/
 │   ├── PatientDataAnonymizedEvent.cs # Raised on anonymization
 │   ├── ResearchStudyCreatedEvent.cs  # Raised on study creation
 │   ├── ResearcherCreatedEvent.cs     # Raised on researcher registration
+│   ├── ResearcherKeyRotatedEvent.cs  # Raised on public key rotation (old + new version)
 │   ├── PatientDataSharedEvent.cs     # Raised when data is shared
 │   ├── DataShareAccessedEvent.cs     # Raised when share is accepted
 │   └── DataShareRevokedEvent.cs      # Raised when share is revoked
@@ -145,7 +146,7 @@ dotnet run --project src/Presentation/OpenMedSphere.API/OpenMedSphere.API.csproj
 
 ### Testing
 ```bash
-# Run all tests (172 tests: 133 domain + 39 application)
+# Run all tests (183 tests: 135 domain + 48 application)
 dotnet test OpenMedSphere.slnx
 
 # Run domain tests only
@@ -202,9 +203,10 @@ Follow the established patterns in existing entities:
 - Use private constructors with static factory methods (`Create`)
 - Include parameterless constructor for EF Core
 - Mark aggregates as `sealed`
-- Use `required` modifier for mandatory properties
+- Use `required` modifier for mandatory properties where the setter is `public` or `init`
+- For properties with `private set` (modified only by domain methods), use `= null!` instead of `required` since C# requires the setter to be at least as visible as the type for `required`
 - Track `CreatedAtUtc` and `UpdatedAtUtc` timestamps
-- Use `private set` for state properties modified by domain methods (e.g., `Status`, `UpdatedAtUtc`) — EF Core sets them via reflection
+- Use `private set` for state properties modified by domain methods (e.g., `Name`, `Status`, `UpdatedAtUtc`) — EF Core sets them via reflection
 - Validate inputs using `ArgumentNullException.ThrowIfNull()`, `ArgumentException.ThrowIfNullOrWhiteSpace()`, etc.
 - Raise domain events in factory methods and critical state changes
 - Encapsulate mutable collections with private backing fields and `IReadOnlyCollection<T>` public properties
@@ -215,7 +217,7 @@ public sealed class MyEntity : AggregateRoot<Guid>
 {
     private readonly List<string> _items = [];
 
-    public required string Name { get; set; }
+    public string Name { get; private set; } = null!;  // private set + null! (not required)
     public IReadOnlyCollection<string> Items => _items.AsReadOnly();
     public DateTime CreatedAtUtc { get; init; }
     public DateTime? UpdatedAtUtc { get; private set; }
@@ -240,12 +242,13 @@ public sealed class MyEntity : AggregateRoot<Guid>
 - Use simple `if` checks that add `ValidationError` entries
 - Validators return `ValidationResult` (not exceptions)
 - Every command should have a validator — even if it only checks for empty GUIDs
-- Use built-in .NET validation where possible (e.g., `MailAddress.TryCreate` for email)
+- Use built-in .NET validation where possible (e.g., `MailAddress.TryCreate` for email, `Convert.TryFromBase64String` for Base64 fields)
 
 ### Command Handler Patterns
 - Check preconditions (status, permissions, active state) before calling domain methods
 - Return `Result.InvalidOperation()` for failed preconditions — do NOT catch domain exceptions for control flow
-- Validate entity exists → check authorization → check state → perform action
+- Validate entity exists → check authorization → check active state → check domain state → perform action
+- Always check `IsActive` before mutations (e.g., key rotation, share creation)
 - Use `Guid.CreateVersion7()` for all new entity IDs (better index performance, time-sortable)
 
 ### Testing Conventions
@@ -348,7 +351,7 @@ GitHub Actions workflow (`.github/workflows/pr-validation.yml`):
 - **Domain Layer (complete):**
   - Aggregate roots: `PatientData`, `ResearchStudy`, `AnonymizationPolicy`, `Researcher`, `DataShare`, `AuditLogEntry`
   - Value objects: `PatientIdentifier`, `DateRange`, `StudyCode`, `MedicalCode`, `PublicKeySet`
-  - Domain events: `PatientDataCreatedEvent`, `PatientDataAnonymizedEvent`, `ResearchStudyCreatedEvent`, `ResearcherCreatedEvent`, `PatientDataSharedEvent`, `DataShareAccessedEvent`, `DataShareRevokedEvent`
+  - Domain events: `PatientDataCreatedEvent`, `PatientDataAnonymizedEvent`, `ResearchStudyCreatedEvent`, `ResearcherCreatedEvent`, `ResearcherKeyRotatedEvent`, `PatientDataSharedEvent`, `DataShareAccessedEvent`, `DataShareRevokedEvent`
   - Enums: `AnonymizationLevel`, `DataShareStatus` (Pending, Accepted, Revoked, Expired)
   - Primitives: `Entity<TId>`, `AggregateRoot<TId>`, `IDomainEvent` (all value objects are C# records, no base class needed)
   - Encapsulated mutable collections with IReadOnlyCollection properties
@@ -373,16 +376,20 @@ GitHub Actions workflow (`.github/workflows/pr-validation.yml`):
 - **E2E Encrypted Data Sharing (server-side complete):**
   - `Researcher` entity with hybrid PQC public keys (ML-KEM-768, ML-DSA-65, X25519, ECDSA P-256)
   - `DataShare` entity for opaque encrypted blob storage (zero-knowledge server)
-  - Key rotation with monotonic version enforcement
+  - Key rotation with monotonic version enforcement and `ResearcherKeyRotatedEvent`
   - CQRS commands: RegisterResearcher, UpdatePublicKeys, CreateDataShare, AcceptDataShare, RevokeDataShare
   - Full lifecycle: create → accept → revoke with domain events
+  - Expiry: computed at query time via `EffectiveStatus` (only Pending → Expired; Accepted shares stay Accepted past expiry — clients inspect `ExpiresAtUtc` directly)
   - Authorization via JWT claims (researcher ID extracted from `NameIdentifier` claim, not request parameters)
-  - Active status checks on sender/recipient during share creation
+  - Active status checks on sender/recipient during share creation and key rotation
+  - Base64 format validation on all cryptographic fields (public keys, encrypted payload, encapsulated key, signature)
+  - Paginated incoming/outgoing share list endpoints (default 20, max 100)
   - Handler-level precondition checks for state transitions (no exception-driven control flow)
-- **Testing (172 tests):**
+- **Testing (183 tests: 135 domain + 48 application):**
   - Domain entity tests (PatientData, ResearchStudy, AnonymizationPolicy, Researcher, DataShare)
   - Value object tests (PatientIdentifier, DateRange, StudyCode, MedicalCode, PublicKeySet)
   - Command handler tests with Moq (CreatePatientData, AnonymizePatientData, CreateResearchStudy, CreateAnonymizationPolicy, RegisterResearcher, CreateDataShare, AcceptDataShare, RevokeDataShare, UpdateResearcherPublicKeys)
+  - Query handler tests (GetDataShareById — authorization, non-participant rejection, effective status)
   - Validator tests (CreatePatientDataCommandValidator)
 
 **Planned (Not Yet Implemented):**

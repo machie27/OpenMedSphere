@@ -103,7 +103,9 @@ public static class DataShareEndpoints
     private static async Task<IResult> GetIncomingAsync(
         ClaimsPrincipal user,
         IMediator mediator,
-        CancellationToken cancellationToken)
+        int page = 1,
+        int pageSize = 20,
+        CancellationToken cancellationToken = default)
     {
         if (!user.TryGetResearcherId(out Guid researcherId))
         {
@@ -112,7 +114,7 @@ public static class DataShareEndpoints
 
         Result<IReadOnlyList<DataShareSummaryResponse>> result =
             await mediator.QueryAsync<IReadOnlyList<DataShareSummaryResponse>>(
-                new GetIncomingSharesQuery { ResearcherId = researcherId },
+                new GetIncomingSharesQuery { ResearcherId = researcherId, Page = page, PageSize = pageSize },
                 cancellationToken);
 
         return result.IsSuccess
@@ -123,7 +125,9 @@ public static class DataShareEndpoints
     private static async Task<IResult> GetOutgoingAsync(
         ClaimsPrincipal user,
         IMediator mediator,
-        CancellationToken cancellationToken)
+        int page = 1,
+        int pageSize = 20,
+        CancellationToken cancellationToken = default)
     {
         if (!user.TryGetResearcherId(out Guid researcherId))
         {
@@ -132,7 +136,7 @@ public static class DataShareEndpoints
 
         Result<IReadOnlyList<DataShareSummaryResponse>> result =
             await mediator.QueryAsync<IReadOnlyList<DataShareSummaryResponse>>(
-                new GetOutgoingSharesQuery { ResearcherId = researcherId },
+                new GetOutgoingSharesQuery { ResearcherId = researcherId, Page = page, PageSize = pageSize },
                 cancellationToken);
 
         return result.IsSuccess

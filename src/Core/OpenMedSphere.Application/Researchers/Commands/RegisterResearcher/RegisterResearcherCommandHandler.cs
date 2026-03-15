@@ -40,10 +40,13 @@ internal sealed class RegisterResearcherCommandHandler(
         {
             await unitOfWork.SaveChangesAsync(cancellationToken);
         }
-        catch (Exception ex) when (ex.ToString().Contains("IX_Researchers_Email", StringComparison.Ordinal))
+        catch (Exception ex) when (
+            ex.GetType().Name is "DbUpdateException" &&
+            ex.ToString().Contains("IX_Researchers_Email", StringComparison.Ordinal))
         {
             // Unique index violation from concurrent insert — the optimistic check above
             // handles the common case; this catches the rare race condition.
+            // DbUpdateException checked by name to avoid an EF Core dependency in Application.
             return Result<Guid>.Conflict($"A researcher with email '{command.Email}' already exists.");
         }
 

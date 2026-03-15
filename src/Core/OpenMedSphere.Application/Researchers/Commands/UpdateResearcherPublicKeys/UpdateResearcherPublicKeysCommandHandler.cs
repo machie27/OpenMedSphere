@@ -25,6 +25,11 @@ internal sealed class UpdateResearcherPublicKeysCommandHandler(
             return Result.NotFound($"Researcher with ID '{command.ResearcherId}' not found.");
         }
 
+        if (!researcher.IsActive)
+        {
+            return Result.InvalidOperation("Cannot update keys for an inactive researcher account.");
+        }
+
         if (command.KeyVersion <= researcher.PublicKeys.KeyVersion)
         {
             return Result.InvalidOperation(

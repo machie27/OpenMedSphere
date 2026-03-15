@@ -17,6 +17,8 @@ internal sealed class ResearcherRepository(ApplicationDbContext dbContext)
         await DbSet.FirstOrDefaultAsync(r => r.Email == email, cancellationToken);
 
     /// <inheritdoc />
+    // TODO: Add pg_trgm GIN index on name/email/institution for efficient substring search.
+    // Current LOWER(col) LIKE '%x%' cannot use B-tree indexes and scans the full table.
     public async Task<IReadOnlyList<Researcher>> SearchAsync(
         string query,
         CancellationToken cancellationToken = default)

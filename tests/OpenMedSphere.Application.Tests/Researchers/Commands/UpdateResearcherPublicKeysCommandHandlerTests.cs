@@ -113,6 +113,33 @@ namespace OpenMedSphere.Application.Tests.Researchers.Commands
         }
 
         [Fact]
+        public async Task HandleAsync_InactiveResearcher_ReturnsInvalidOperation()
+        {
+            Researcher researcher = CreateResearcherWithKeyVersion(1);
+            researcher.Deactivate();
+
+            _repositoryMock
+                .Setup(r => r.GetByIdAsync(researcher.Id, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(researcher);
+
+            UpdateResearcherPublicKeysCommand command = new()
+            {
+                ResearcherId = researcher.Id,
+                MlKemPublicKey = "k1",
+                MlDsaPublicKey = "k2",
+                X25519PublicKey = "k3",
+                EcdsaPublicKey = "k4",
+                KeyVersion = 2
+            };
+
+            Result result = await _handler.HandleAsync(command, CancellationToken.None);
+
+            Assert.True(result.IsFailure);
+            Assert.Equal(ErrorCode.InvalidOperation, result.ErrorCode);
+            Assert.Contains("inactive", result.Error!, StringComparison.OrdinalIgnoreCase);
+        }
+
+        [Fact]
         public async Task HandleAsync_LowerKeyVersion_ReturnsInvalidOperation()
         {
             Researcher researcher = CreateResearcherWithKeyVersion(5);

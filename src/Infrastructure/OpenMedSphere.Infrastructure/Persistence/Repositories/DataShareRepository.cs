@@ -13,18 +13,26 @@ internal sealed class DataShareRepository(ApplicationDbContext dbContext)
     /// <inheritdoc />
     public async Task<IReadOnlyList<DataShare>> GetIncomingSharesAsync(
         Guid recipientResearcherId,
+        int skip,
+        int take,
         CancellationToken cancellationToken = default) =>
         await DbSet
             .Where(d => d.RecipientResearcherId == recipientResearcherId)
             .OrderByDescending(d => d.SharedAtUtc)
+            .Skip(skip)
+            .Take(take)
             .ToListAsync(cancellationToken);
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<DataShare>> GetOutgoingSharesAsync(
         Guid senderResearcherId,
+        int skip,
+        int take,
         CancellationToken cancellationToken = default) =>
         await DbSet
             .Where(d => d.SenderResearcherId == senderResearcherId)
             .OrderByDescending(d => d.SharedAtUtc)
+            .Skip(skip)
+            .Take(take)
             .ToListAsync(cancellationToken);
 }
