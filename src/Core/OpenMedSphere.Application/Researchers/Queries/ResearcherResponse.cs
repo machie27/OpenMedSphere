@@ -74,6 +74,8 @@ public sealed record PublicKeySetResponse
 
 /// <summary>
 /// Summary response DTO for researcher search results.
+/// Email is intentionally excluded to prevent disclosure via search — use the
+/// full <see cref="ResearcherResponse"/> for direct lookups instead.
 /// </summary>
 public sealed record ResearcherSummaryResponse
 {
@@ -86,11 +88,6 @@ public sealed record ResearcherSummaryResponse
     /// Gets the researcher's name.
     /// </summary>
     public required string Name { get; init; }
-
-    /// <summary>
-    /// Gets the researcher's email address.
-    /// </summary>
-    public required string Email { get; init; }
 
     /// <summary>
     /// Gets the researcher's institution.

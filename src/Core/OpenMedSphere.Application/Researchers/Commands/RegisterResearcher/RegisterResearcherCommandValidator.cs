@@ -61,5 +61,9 @@ internal sealed class RegisterResearcherCommandValidator : IValidator<RegisterRe
         {
             errors.Add(new ValidationError(propertyName, $"{displayName} must not exceed {ValidationConstants.MaxBase64KeyLength} characters."));
         }
+        else if (!Convert.TryFromBase64String(value, new byte[value.Length], out _))
+        {
+            errors.Add(new ValidationError(propertyName, $"{displayName} must be a valid Base64 string."));
+        }
     }
 }

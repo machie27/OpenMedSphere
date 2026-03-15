@@ -193,6 +193,11 @@ public sealed class DataShare : AggregateRoot<Guid>
             throw new InvalidOperationException("Data share is already revoked.");
         }
 
+        if (IsExpired())
+        {
+            throw new InvalidOperationException("Cannot revoke an expired data share.");
+        }
+
         Status = DataShareStatus.Revoked;
         UpdatedAtUtc = DateTime.UtcNow;
 

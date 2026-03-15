@@ -13,27 +13,27 @@ public sealed class Researcher : AggregateRoot<Guid>
     /// <summary>
     /// Gets the researcher's name.
     /// </summary>
-    public required string Name { get; set; }
+    public string Name { get; private set; } = null!;
 
     /// <summary>
     /// Gets the researcher's email address.
     /// </summary>
-    public required string Email { get; set; }
+    public string Email { get; private set; } = null!;
 
     /// <summary>
     /// Gets the researcher's institution.
     /// </summary>
-    public required string Institution { get; set; }
+    public string Institution { get; private set; } = null!;
 
     /// <summary>
     /// Gets the researcher's public key set for hybrid quantum-safe encryption.
     /// </summary>
-    public required PublicKeySet PublicKeys { get; set; }
+    public PublicKeySet PublicKeys { get; private set; } = null!;
 
     /// <summary>
     /// Gets a value indicating whether the researcher account is active.
     /// </summary>
-    public bool IsActive { get; set; } = true;
+    public bool IsActive { get; private set; } = true;
 
     /// <summary>
     /// Gets the date and time when the researcher was created.
@@ -43,7 +43,7 @@ public sealed class Researcher : AggregateRoot<Guid>
     /// <summary>
     /// Gets the date and time when the researcher was last updated.
     /// </summary>
-    public DateTime? UpdatedAtUtc { get; set; }
+    public DateTime? UpdatedAtUtc { get; private set; }
 
     /// <summary>
     /// Required for EF Core.
@@ -104,8 +104,11 @@ public sealed class Researcher : AggregateRoot<Guid>
                 nameof(newPublicKeys));
         }
 
+        var oldKeyVersion = PublicKeys.KeyVersion;
         PublicKeys = newPublicKeys;
         UpdatedAtUtc = DateTime.UtcNow;
+
+        RaiseDomainEvent(new ResearcherKeyRotatedEvent(Id, oldKeyVersion, newPublicKeys.KeyVersion));
     }
 
     /// <summary>

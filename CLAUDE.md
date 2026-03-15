@@ -396,7 +396,7 @@ GitHub Actions workflow (`.github/workflows/pr-validation.yml`):
 ## Security Considerations
 
 - Avoid OWASP Top 10 vulnerabilities (XSS, SQL injection, command injection, etc.)
-- LIKE wildcard injection prevented in repository queries (escaping `%`, `_`, `\`)
+- LIKE wildcard injection: EF Core 10 with Npgsql parameterizes `Contains()`/`ILIKE` queries, so wildcard characters in user input are not interpreted as patterns — no manual escaping needed
 - Never commit secrets, API keys, or tokens
 - Use User Secrets for local development
 - JWT authentication required on all data endpoints

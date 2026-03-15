@@ -178,6 +178,16 @@ namespace OpenMedSphere.Domain.Tests.Entities
         }
 
         [Fact]
+        public async Task Revoke_WhenExpired_ThrowsInvalidOperationException()
+        {
+            var share = CreateTestShare(DateTime.UtcNow.AddMilliseconds(50));
+
+            await Task.Delay(100, TestContext.Current.CancellationToken);
+
+            Assert.Throws<InvalidOperationException>(() => share.Revoke());
+        }
+
+        [Fact]
         public void IsExpired_WithNoExpiry_ReturnsFalse()
         {
             var share = CreateTestShare();

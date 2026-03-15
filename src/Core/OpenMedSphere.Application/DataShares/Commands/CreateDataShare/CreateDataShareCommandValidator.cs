@@ -69,6 +69,11 @@ internal sealed class CreateDataShareCommandValidator : IValidator<CreateDataSha
             errors.Add(new ValidationError(nameof(instance.RecipientKeyVersion), "Recipient key version must be at least 1."));
         }
 
+        if (instance.ExpiresAtUtc.HasValue && instance.ExpiresAtUtc.Value <= DateTime.UtcNow)
+        {
+            errors.Add(new ValidationError(nameof(instance.ExpiresAtUtc), "Expiry date must be in the future."));
+        }
+
         return Task.FromResult(errors.Count == 0 ? ValidationResult.Success() : new ValidationResult { Errors = errors });
     }
 }

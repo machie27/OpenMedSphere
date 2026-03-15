@@ -40,7 +40,7 @@ internal sealed class RegisterResearcherCommandHandler(
         {
             await unitOfWork.SaveChangesAsync(cancellationToken);
         }
-        catch (Exception ex) when (ex.InnerException?.Message.Contains("IX_Researchers_Email", StringComparison.Ordinal) == true)
+        catch (Exception ex) when (ex.ToString().Contains("IX_Researchers_Email", StringComparison.Ordinal))
         {
             // Unique index violation from concurrent insert — the optimistic check above
             // handles the common case; this catches the rare race condition.

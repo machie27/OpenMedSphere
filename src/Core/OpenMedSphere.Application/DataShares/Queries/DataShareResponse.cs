@@ -45,22 +45,22 @@ public sealed record DataShareResponse
     /// <summary>
     /// Gets the sender's key version.
     /// </summary>
-    public int SenderKeyVersion { get; init; }
+    public required int SenderKeyVersion { get; init; }
 
     /// <summary>
     /// Gets the recipient's key version.
     /// </summary>
-    public int RecipientKeyVersion { get; init; }
+    public required int RecipientKeyVersion { get; init; }
 
     /// <summary>
     /// Gets the status.
     /// </summary>
-    public DataShareStatus Status { get; init; }
+    public required DataShareStatus Status { get; init; }
 
     /// <summary>
     /// Gets the shared date.
     /// </summary>
-    public DateTime SharedAtUtc { get; init; }
+    public required DateTime SharedAtUtc { get; init; }
 
     /// <summary>
     /// Gets the accessed date.
@@ -101,12 +101,12 @@ public sealed record DataShareSummaryResponse
     /// <summary>
     /// Gets the status.
     /// </summary>
-    public DataShareStatus Status { get; init; }
+    public required DataShareStatus Status { get; init; }
 
     /// <summary>
     /// Gets the shared date.
     /// </summary>
-    public DateTime SharedAtUtc { get; init; }
+    public required DateTime SharedAtUtc { get; init; }
 
     /// <summary>
     /// Gets the accessed date.

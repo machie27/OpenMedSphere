@@ -1,4 +1,5 @@
 using OpenMedSphere.Domain.Entities;
+using OpenMedSphere.Domain.Events;
 using OpenMedSphere.Domain.ValueObjects;
 using Xunit;
 
@@ -73,6 +74,21 @@ namespace OpenMedSphere.Domain.Tests.Entities
             Assert.Equal(newKeys, researcher.PublicKeys);
             Assert.Equal(2, researcher.PublicKeys.KeyVersion);
             Assert.NotNull(researcher.UpdatedAtUtc);
+        }
+
+        [Fact]
+        public void RotateKeys_WithHigherVersion_RaisesKeyRotatedEvent()
+        {
+            var researcher = Researcher.Create("Dr. Smith", "email@test.com", "MIT", CreateTestKeys(1));
+            researcher.ClearDomainEvents();
+
+            researcher.RotateKeys(CreateTestKeys(2));
+
+            Assert.Single(researcher.DomainEvents);
+            var domainEvent = Assert.IsType<ResearcherKeyRotatedEvent>(researcher.DomainEvents.First());
+            Assert.Equal(researcher.Id, domainEvent.ResearcherId);
+            Assert.Equal(1, domainEvent.OldKeyVersion);
+            Assert.Equal(2, domainEvent.NewKeyVersion);
         }
 
         [Fact]

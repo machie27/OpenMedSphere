@@ -22,7 +22,6 @@ internal sealed class SearchResearchersQueryHandler(IResearcherRepository reposi
             {
                 Id = r.Id,
                 Name = r.Name,
-                Email = r.Email,
                 Institution = r.Institution
             })
             .ToList();
