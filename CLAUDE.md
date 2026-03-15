@@ -148,7 +148,7 @@ dotnet run --project src/Presentation/OpenMedSphere.API/OpenMedSphere.API.csproj
 
 ### Testing
 ```bash
-# Run all tests (183 tests: 135 domain + 48 application)
+# Run all tests (223 tests: 148 domain + 75 application)
 dotnet test OpenMedSphere.slnx
 
 # Run domain tests only
@@ -285,7 +285,7 @@ See `Directory.Packages.props` for the authoritative list. Key packages:
 | Aspire.Hosting.PostgreSQL / Redis | 13.1.2 |
 | Microsoft.AspNetCore.Authentication.JwtBearer | 10.0.5 |
 | Microsoft.EntityFrameworkCore | 10.0.5 |
-| Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.0 |
+| Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.1 |
 | Microsoft.Extensions.Caching.Hybrid | 10.4.0 |
 | OpenTelemetry.* | 1.15.x |
 | Scalar.AspNetCore | 2.13.8 |
@@ -367,7 +367,7 @@ GitHub Actions workflow (`.github/workflows/pr-validation.yml`):
 - **Domain Layer (complete):**
   - Aggregate roots: `PatientData`, `ResearchStudy`, `AnonymizationPolicy`, `Researcher`, `DataShare`, `AuditLogEntry`
   - Value objects: `PatientIdentifier`, `DateRange`, `StudyCode`, `MedicalCode`, `PublicKeySet`
-  - Domain events: `PatientDataCreatedEvent`, `PatientDataAnonymizedEvent`, `ResearchStudyCreatedEvent`, `ResearcherCreatedEvent`, `ResearcherKeyRotatedEvent`, `PatientDataSharedEvent`, `DataShareAccessedEvent`, `DataShareRevokedEvent`
+  - Domain events: `PatientDataCreatedEvent`, `PatientDataAnonymizedEvent`, `ResearchStudyCreatedEvent`, `ResearcherCreatedEvent`, `ResearcherKeyRotatedEvent`, `ResearcherDeactivatedEvent`, `ResearcherActivatedEvent`, `PatientDataSharedEvent`, `DataShareAccessedEvent`, `DataShareRevokedEvent`
   - Enums: `AnonymizationLevel`, `DataShareStatus` (Pending, Accepted, Revoked, Expired)
   - Primitives: `Entity<TId>`, `AggregateRoot<TId>`, `IDomainEvent` (all value objects are C# records, no base class needed)
   - Encapsulated mutable collections with IReadOnlyCollection properties
@@ -400,7 +400,7 @@ GitHub Actions workflow (`.github/workflows/pr-validation.yml`):
   - Authorization via JWT claims (researcher ID extracted from `NameIdentifier` claim, not request parameters)
   - Active status checks on sender/recipient during share creation and key rotation
   - Base64 format validation on all cryptographic fields (public keys, encrypted payload, encapsulated key, signature)
-  - Paginated incoming/outgoing share list endpoints (default 20, max 100)
+  - Paginated incoming/outgoing share list and researcher search endpoints (default 20, max 100)
   - Handler-level precondition checks for state transitions (no exception-driven control flow)
 - **Testing (223 tests: 148 domain + 75 application):**
   - Domain entity tests (PatientData, ResearchStudy, AnonymizationPolicy, Researcher, DataShare)
