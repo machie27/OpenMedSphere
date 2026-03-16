@@ -11,12 +11,14 @@ namespace OpenMedSphere.Application.Tests.Researchers.Commands
     {
         private readonly Mock<IResearcherRepository> _repositoryMock;
         private readonly Mock<IUnitOfWork> _unitOfWorkMock;
+        private readonly Mock<IUniqueConstraintViolationDetector> _uniqueConstraintDetectorMock;
         private readonly RegisterResearcherCommandHandler _handler;
 
         public RegisterResearcherCommandHandlerTests()
         {
             _repositoryMock = new Mock<IResearcherRepository>();
             _unitOfWorkMock = new Mock<IUnitOfWork>();
+            _uniqueConstraintDetectorMock = new Mock<IUniqueConstraintViolationDetector>();
 
             _unitOfWorkMock
                 .Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
@@ -24,7 +26,8 @@ namespace OpenMedSphere.Application.Tests.Researchers.Commands
 
             _handler = new RegisterResearcherCommandHandler(
                 _repositoryMock.Object,
-                _unitOfWorkMock.Object);
+                _unitOfWorkMock.Object,
+                _uniqueConstraintDetectorMock.Object);
         }
 
         [Fact]
@@ -92,15 +95,19 @@ namespace OpenMedSphere.Application.Tests.Researchers.Commands
         [Fact]
         public async Task HandleAsync_ConcurrentDuplicateEmail_ReturnsConflict()
         {
+            var savedException = new InvalidOperationException("unique constraint violation");
+
             _repositoryMock
                 .Setup(r => r.GetByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync((Researcher?)null);
 
             _unitOfWorkMock
                 .Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
-                .ThrowsAsync(new DbUpdateException(
-                    "An error occurred while saving the entity changes.",
-                    new Exception("duplicate key value violates unique constraint \"IX_Researchers_Email\"")));
+                .ThrowsAsync(savedException);
+
+            _uniqueConstraintDetectorMock
+                .Setup(d => d.IsUniqueConstraintViolation(savedException, "IX_Researchers_Email"))
+                .Returns(true);
 
             RegisterResearcherCommand command = new()
             {
@@ -118,11 +125,6 @@ namespace OpenMedSphere.Application.Tests.Researchers.Commands
             Assert.True(result.IsFailure);
             Assert.Equal(ErrorCode.Conflict, result.ErrorCode);
             Assert.Contains("smith@university.edu", result.Error!);
-        }
-
-        private class DbUpdateException(string message, Exception? innerException = null)
-            : Exception(message, innerException)
-        {
         }
     }
 }

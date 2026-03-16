@@ -24,27 +24,27 @@ public sealed class PatientData : AggregateRoot<Guid>
     /// <summary>
     /// Gets the year of birth (generalized for privacy).
     /// </summary>
-    public int? YearOfBirth { get; set; }
+    public int? YearOfBirth { get; private set; }
 
     /// <summary>
     /// Gets the gender of the patient.
     /// </summary>
-    public string? Gender { get; set; }
+    public string? Gender { get; private set; }
 
     /// <summary>
     /// Gets the region or generalized location of the patient.
     /// </summary>
-    public string? Region { get; set; }
+    public string? Region { get; private set; }
 
     /// <summary>
     /// Gets the primary diagnosis or condition.
     /// </summary>
-    public string? PrimaryDiagnosis { get; set; }
+    public string? PrimaryDiagnosis { get; private set; }
 
     /// <summary>
     /// Gets the structured medical code for the primary diagnosis.
     /// </summary>
-    public MedicalCode? PrimaryDiagnosisCode { get; set; }
+    public MedicalCode? PrimaryDiagnosisCode { get; private set; }
 
     /// <summary>
     /// Gets the list of secondary diagnoses.
@@ -64,12 +64,12 @@ public sealed class PatientData : AggregateRoot<Guid>
     /// <summary>
     /// Gets the clinical notes (anonymized).
     /// </summary>
-    public string? ClinicalNotes { get; set; }
+    public string? ClinicalNotes { get; private set; }
 
     /// <summary>
     /// Gets the ID of the anonymization policy applied to this data.
     /// </summary>
-    public Guid? AnonymizationPolicyId { get; set; }
+    public Guid? AnonymizationPolicyId { get; private set; }
 
     /// <summary>
     /// Gets the date and time when the data was collected.
@@ -79,12 +79,12 @@ public sealed class PatientData : AggregateRoot<Guid>
     /// <summary>
     /// Gets the date and time when the data was anonymized.
     /// </summary>
-    public DateTime? AnonymizedAtUtc { get; set; }
+    public DateTime? AnonymizedAtUtc { get; private set; }
 
     /// <summary>
     /// Gets a value indicating whether the data has been anonymized.
     /// </summary>
-    public bool IsAnonymized { get; set; }
+    public bool IsAnonymized { get; private set; }
 
     /// <summary>
     /// Gets the date and time when the data was created.
@@ -94,7 +94,7 @@ public sealed class PatientData : AggregateRoot<Guid>
     /// <summary>
     /// Gets the date and time when the data was last updated.
     /// </summary>
-    public DateTime? UpdatedAtUtc { get; set; }
+    public DateTime? UpdatedAtUtc { get; private set; }
 
     /// <summary>
     /// Required for EF Core.

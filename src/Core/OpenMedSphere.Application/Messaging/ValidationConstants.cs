@@ -51,6 +51,28 @@ internal static class ValidationConstants
     public const int MaxSignatureLength = 8000;
 
     /// <summary>
+    /// Validates standard pagination parameters (Page and PageSize).
+    /// </summary>
+    /// <param name="page">The page number.</param>
+    /// <param name="pagePropertyName">The property name for the page field.</param>
+    /// <param name="pageSize">The page size.</param>
+    /// <param name="pageSizePropertyName">The property name for the page size field.</param>
+    /// <param name="errors">The error list to append to.</param>
+    internal static void ValidatePagination(
+        int page, string pagePropertyName, int pageSize, string pageSizePropertyName, List<ValidationError> errors)
+    {
+        if (page < MinPage)
+        {
+            errors.Add(new ValidationError(pagePropertyName, $"Page must be at least {MinPage}."));
+        }
+
+        if (pageSize < 1 || pageSize > MaxPageSize)
+        {
+            errors.Add(new ValidationError(pageSizePropertyName, $"Page size must be between 1 and {MaxPageSize}."));
+        }
+    }
+
+    /// <summary>
     /// Validates that a value is a non-empty, length-limited, valid Base64 string.
     /// Uses <see cref="Base64.IsValid(ReadOnlySpan{char})"/> to avoid allocating a decode buffer.
     /// </summary>

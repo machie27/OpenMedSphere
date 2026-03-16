@@ -25,9 +25,10 @@ internal sealed class AcceptDataShareCommandHandler(
             return Result.NotFound($"Data share with ID '{command.DataShareId}' not found.");
         }
 
+        // Return NotFound (not Forbidden/InvalidOperation) to prevent share ID enumeration.
         if (dataShare.RecipientResearcherId != command.ResearcherId)
         {
-            return Result.InvalidOperation("Only the recipient can accept a data share.");
+            return Result.NotFound($"Data share with ID '{command.DataShareId}' not found.");
         }
 
         if (dataShare.Status is not DataShareStatus.Pending)

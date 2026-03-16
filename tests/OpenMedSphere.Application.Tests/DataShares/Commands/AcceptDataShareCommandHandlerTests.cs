@@ -86,7 +86,7 @@ namespace OpenMedSphere.Application.Tests.DataShares.Commands
         }
 
         [Fact]
-        public async Task HandleAsync_NotRecipient_ReturnsInvalidOperation()
+        public async Task HandleAsync_NotRecipient_ReturnsNotFound()
         {
             DataShare dataShare = CreatePendingDataShare();
 
@@ -103,8 +103,7 @@ namespace OpenMedSphere.Application.Tests.DataShares.Commands
             Result result = await _handler.HandleAsync(command, CancellationToken.None);
 
             Assert.True(result.IsFailure);
-            Assert.Equal(ErrorCode.InvalidOperation, result.ErrorCode);
-            Assert.Contains("recipient", result.Error!, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal(ErrorCode.NotFound, result.ErrorCode);
         }
 
         [Fact]

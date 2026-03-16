@@ -249,16 +249,19 @@ public sealed class MyEntity : AggregateRoot<Guid>
 - Every command should have a validator — even if it only checks for empty GUIDs
 - Use built-in .NET validation where possible (e.g., `MailAddress.TryCreate` for email, `Base64.IsValid()` for Base64 fields)
 - For Base64 validation, use `ValidationConstants.ValidateBase64Field()` — shared helper that avoids large allocations
+- For pagination validation, use `ValidationConstants.ValidatePagination()` — shared helper for Page/PageSize checks
 - NEVER use `Convert.TryFromBase64String(value, new byte[value.Length], out _)` — allocates a full decode buffer
 
 ### Command Handler Patterns
 - Check preconditions (status, permissions, active state) before calling domain methods
 - Return `Result.InvalidOperation()` for failed preconditions — do NOT catch domain exceptions for control flow
 - Validate entity exists → check authorization → check active state → check domain state → perform action
+- **Anti-enumeration**: When a caller is not authorized to act on an entity, return `NotFound` (not `InvalidOperation` or `Forbidden`) to prevent ID enumeration — an attacker must not be able to distinguish "doesn't exist" from "exists but not yours"
 - Always check `IsActive` before mutations (e.g., key rotation, share creation)
 - For time-sensitive preconditions (e.g., expiry dates), check at both validator AND handler level to avoid TOCTOU races
 - Handler preconditions must be a superset of domain method guards — if the domain throws, it escapes as an unhandled 500
 - Use `Guid.CreateVersion7()` for all new entity IDs (better index performance, time-sortable)
+- **Concurrent unique constraint handling**: Use `IUniqueConstraintViolationDetector` (Application abstraction) to detect database unique constraint violations without coupling to EF Core/Npgsql types — do NOT string-match on exception type names or inner exception messages
 
 ### API Endpoint Patterns
 - Use `if`/`else` with a `MapError()` switch expression — avoid nested ternary operators for Result-to-IResult mapping
@@ -377,9 +380,11 @@ GitHub Actions workflow (`.github/workflows/pr-validation.yml`):
   - CQRS commands/queries for PatientData, ResearchStudy, AnonymizationPolicy, MedicalTerminology, Researchers, DataShares
   - Custom validation pipeline (`IValidator<T>`, `ValidationResult`)
   - Specification pattern for complex queries
+  - `IUniqueConstraintViolationDetector` abstraction for database constraint error detection without EF Core coupling
 - **Infrastructure Layer (complete):**
   - EF Core with PostgreSQL via Npgsql
   - Generic repository pattern with specification evaluator
+  - `NpgsqlUniqueConstraintViolationDetector` — implements `IUniqueConstraintViolationDetector` using PostgreSQL error code 23505
   - ICD-11 medical terminology integration (API + fallback static dataset)
   - HybridCache (`Microsoft.Extensions.Caching.Hybrid`) for ICD-11 API response caching
   - Audit logging via SaveChangesInterceptor
@@ -403,6 +408,7 @@ GitHub Actions workflow (`.github/workflows/pr-validation.yml`):
   - Base64 format validation on all cryptographic fields (public keys, encrypted payload, encapsulated key, signature)
   - Paginated incoming/outgoing share list and researcher search endpoints (default 20, max 100)
   - Handler-level precondition checks for state transitions (no exception-driven control flow)
+  - Anti-enumeration: Accept/Revoke handlers return NotFound for unauthorized callers (prevents share ID enumeration)
 - **Testing (242 tests: 152 domain + 90 application):**
   - Domain entity tests (PatientData, ResearchStudy, AnonymizationPolicy, Researcher, DataShare)
   - Value object tests (PatientIdentifier, DateRange, StudyCode, MedicalCode, PublicKeySet)
@@ -428,6 +434,7 @@ GitHub Actions workflow (`.github/workflows/pr-validation.yml`):
 - Rate limiting to prevent abuse
 - Audit logging for compliance tracking
 - E2E encrypted data sharing with zero-knowledge server architecture
+- Anti-enumeration on all data share endpoints — unauthorized callers always receive NotFound (never a distinct error that leaks existence)
 - Hybrid quantum-safe cryptography: ML-KEM-768 + X25519 (key agreement), ML-DSA-65 + ECDSA (signatures), AES-256-GCM (symmetric)
 - Future: Implement HIPAA and GDPR compliance requirements
 - Future: Client-side crypto via Rust WASM for data at rest and in transit

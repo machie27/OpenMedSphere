@@ -61,6 +61,7 @@ public static class DependencyInjection
         services.AddScoped<IAnonymizationPolicyRepository, AnonymizationPolicyRepository>();
         services.AddScoped<IResearcherRepository, ResearcherRepository>();
         services.AddScoped<IDataShareRepository, DataShareRepository>();
+        services.AddSingleton<IUniqueConstraintViolationDetector, NpgsqlUniqueConstraintViolationDetector>();
     }
 
     private static void AddMedicalTerminology(IServiceCollection services, IConfiguration configuration)

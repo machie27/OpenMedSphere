@@ -25,9 +25,10 @@ internal sealed class RevokeDataShareCommandHandler(
             return Result.NotFound($"Data share with ID '{command.DataShareId}' not found.");
         }
 
+        // Return NotFound (not Forbidden/InvalidOperation) to prevent share ID enumeration.
         if (dataShare.SenderResearcherId != command.ResearcherId)
         {
-            return Result.InvalidOperation("Only the sender can revoke a data share.");
+            return Result.NotFound($"Data share with ID '{command.DataShareId}' not found.");
         }
 
         if (dataShare.Status is DataShareStatus.Revoked)
