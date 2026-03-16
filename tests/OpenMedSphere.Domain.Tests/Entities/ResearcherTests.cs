@@ -132,6 +132,19 @@ namespace OpenMedSphere.Domain.Tests.Entities
         }
 
         [Fact]
+        public void UpdateProfile_WithValidValues_RaisesProfileUpdatedEvent()
+        {
+            var researcher = Researcher.Create("Dr. Smith", "email@test.com", "MIT", CreateTestKeys());
+            researcher.ClearDomainEvents();
+
+            researcher.UpdateProfile("Dr. Jones", "jones@harvard.edu", "Harvard");
+
+            Assert.Single(researcher.DomainEvents);
+            var domainEvent = Assert.IsType<ResearcherProfileUpdatedEvent>(researcher.DomainEvents.First());
+            Assert.Equal(researcher.Id, domainEvent.ResearcherId);
+        }
+
+        [Fact]
         public void UpdateProfile_WithNullName_ThrowsArgumentException()
         {
             var researcher = Researcher.Create("Dr. Smith", "email@test.com", "MIT", CreateTestKeys());

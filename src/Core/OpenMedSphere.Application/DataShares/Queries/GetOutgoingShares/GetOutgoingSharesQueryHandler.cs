@@ -1,6 +1,5 @@
 using OpenMedSphere.Application.Abstractions.Data;
 using OpenMedSphere.Application.Messaging;
-using OpenMedSphere.Domain.Entities;
 
 namespace OpenMedSphere.Application.DataShares.Queries.GetOutgoingShares;
 
@@ -17,22 +16,8 @@ internal sealed class GetOutgoingSharesQueryHandler(IDataShareRepository reposit
     {
         var skip = (query.Page - 1) * query.PageSize;
 
-        IReadOnlyList<DataShare> shares =
+        IReadOnlyList<DataShareSummaryResponse> response =
             await repository.GetOutgoingSharesAsync(query.ResearcherId, skip, query.PageSize, cancellationToken);
-
-        IReadOnlyList<DataShareSummaryResponse> response = shares
-            .Select(s => new DataShareSummaryResponse
-            {
-                Id = s.Id,
-                SenderResearcherId = s.SenderResearcherId,
-                RecipientResearcherId = s.RecipientResearcherId,
-                PatientDataId = s.PatientDataId,
-                Status = s.EffectiveStatus,
-                SharedAtUtc = s.SharedAtUtc,
-                AccessedAtUtc = s.AccessedAtUtc,
-                ExpiresAtUtc = s.ExpiresAtUtc
-            })
-            .ToList();
 
         return Result<IReadOnlyList<DataShareSummaryResponse>>.Success(response);
     }

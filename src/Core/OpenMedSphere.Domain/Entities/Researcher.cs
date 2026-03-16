@@ -142,6 +142,8 @@ public sealed class Researcher : AggregateRoot<Guid>
         Email = email;
         Institution = institution;
         UpdatedAtUtc = DateTime.UtcNow;
+
+        RaiseDomainEvent(new ResearcherProfileUpdatedEvent(Id));
     }
 
     /// <summary>

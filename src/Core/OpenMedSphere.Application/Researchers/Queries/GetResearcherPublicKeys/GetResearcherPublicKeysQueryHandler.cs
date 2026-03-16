@@ -22,6 +22,9 @@ internal sealed class GetResearcherPublicKeysQueryHandler(IResearcherRepository 
             return Result<PublicKeySetResponse>.NotFound($"Researcher with ID '{query.Id}' not found.");
         }
 
+        // Intentionally returns keys even for inactive researchers: clients need old public keys
+        // to verify signatures on previously shared data and to decrypt existing shares.
+
         PublicKeySetResponse response = new()
         {
             MlKemPublicKey = researcher.PublicKeys.MlKemPublicKey,

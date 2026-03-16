@@ -53,13 +53,13 @@ internal sealed class CreateDataShareCommandHandler(
         if (command.SenderKeyVersion != sender.PublicKeys.KeyVersion)
         {
             return Result<Guid>.InvalidOperation(
-                $"Sender key version mismatch: expected {sender.PublicKeys.KeyVersion}, got {command.SenderKeyVersion}. Fetch the latest public keys before encrypting.");
+                "Sender key version is outdated. Fetch the latest public keys before encrypting.");
         }
 
         if (command.RecipientKeyVersion != recipient.PublicKeys.KeyVersion)
         {
             return Result<Guid>.InvalidOperation(
-                $"Recipient key version mismatch: expected {recipient.PublicKeys.KeyVersion}, got {command.RecipientKeyVersion}. Fetch the latest public keys before encrypting.");
+                "Recipient key version is outdated. Fetch the latest public keys before encrypting.");
         }
 
         if (command.ExpiresAtUtc.HasValue && command.ExpiresAtUtc.Value <= DateTime.UtcNow)

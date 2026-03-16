@@ -168,7 +168,7 @@ namespace OpenMedSphere.Application.Tests.DataShares.Commands
 
             Assert.True(result.IsFailure);
             Assert.Equal(ErrorCode.InvalidOperation, result.ErrorCode);
-            Assert.Contains("Sender key version mismatch", result.Error!);
+            Assert.Contains("Sender key version is outdated", result.Error!);
         }
 
         [Fact]
@@ -196,7 +196,7 @@ namespace OpenMedSphere.Application.Tests.DataShares.Commands
 
             Assert.True(result.IsFailure);
             Assert.Equal(ErrorCode.InvalidOperation, result.ErrorCode);
-            Assert.Contains("Recipient key version mismatch", result.Error!);
+            Assert.Contains("Recipient key version is outdated", result.Error!);
         }
 
         [Fact]

@@ -56,7 +56,8 @@ OpenMedSphere.Domain/
 │   ├── DataShareAccessedEvent.cs     # Raised when share is accepted
 │   ├── DataShareRevokedEvent.cs      # Raised when share is revoked
 │   ├── ResearcherDeactivatedEvent.cs  # Raised on researcher deactivation
-│   └── ResearcherActivatedEvent.cs    # Raised on researcher activation
+│   ├── ResearcherActivatedEvent.cs    # Raised on researcher activation
+│   └── ResearcherProfileUpdatedEvent.cs # Raised on profile update
 ├── ValueObjects/
 │   ├── PatientIdentifier.cs    # Anonymized patient ID (record type)
 │   ├── DateRange.cs            # Date range with validation (record type)
@@ -148,7 +149,7 @@ dotnet run --project src/Presentation/OpenMedSphere.API/OpenMedSphere.API.csproj
 
 ### Testing
 ```bash
-# Run all tests (223 tests: 148 domain + 75 application)
+# Run all tests (242 tests: 152 domain + 90 application)
 dotnet test OpenMedSphere.slnx
 
 # Run domain tests only
@@ -367,7 +368,7 @@ GitHub Actions workflow (`.github/workflows/pr-validation.yml`):
 - **Domain Layer (complete):**
   - Aggregate roots: `PatientData`, `ResearchStudy`, `AnonymizationPolicy`, `Researcher`, `DataShare`, `AuditLogEntry`
   - Value objects: `PatientIdentifier`, `DateRange`, `StudyCode`, `MedicalCode`, `PublicKeySet`
-  - Domain events: `PatientDataCreatedEvent`, `PatientDataAnonymizedEvent`, `ResearchStudyCreatedEvent`, `ResearcherCreatedEvent`, `ResearcherKeyRotatedEvent`, `ResearcherDeactivatedEvent`, `ResearcherActivatedEvent`, `PatientDataSharedEvent`, `DataShareAccessedEvent`, `DataShareRevokedEvent`
+  - Domain events: `PatientDataCreatedEvent`, `PatientDataAnonymizedEvent`, `ResearchStudyCreatedEvent`, `ResearcherCreatedEvent`, `ResearcherKeyRotatedEvent`, `ResearcherDeactivatedEvent`, `ResearcherActivatedEvent`, `ResearcherProfileUpdatedEvent`, `PatientDataSharedEvent`, `DataShareAccessedEvent`, `DataShareRevokedEvent`
   - Enums: `AnonymizationLevel`, `DataShareStatus` (Pending, Accepted, Revoked, Expired)
   - Primitives: `Entity<TId>`, `AggregateRoot<TId>`, `IDomainEvent` (all value objects are C# records, no base class needed)
   - Encapsulated mutable collections with IReadOnlyCollection properties
@@ -402,11 +403,11 @@ GitHub Actions workflow (`.github/workflows/pr-validation.yml`):
   - Base64 format validation on all cryptographic fields (public keys, encrypted payload, encapsulated key, signature)
   - Paginated incoming/outgoing share list and researcher search endpoints (default 20, max 100)
   - Handler-level precondition checks for state transitions (no exception-driven control flow)
-- **Testing (223 tests: 148 domain + 75 application):**
+- **Testing (242 tests: 152 domain + 90 application):**
   - Domain entity tests (PatientData, ResearchStudy, AnonymizationPolicy, Researcher, DataShare)
   - Value object tests (PatientIdentifier, DateRange, StudyCode, MedicalCode, PublicKeySet)
   - Command handler tests with Moq (CreatePatientData, AnonymizePatientData, CreateResearchStudy, CreateAnonymizationPolicy, RegisterResearcher, CreateDataShare, AcceptDataShare, RevokeDataShare, UpdateResearcherPublicKeys)
-  - Query handler tests (GetDataShareById — authorization, non-participant rejection, effective status)
+  - Query handler tests (GetDataShareById, GetIncomingShares, GetOutgoingShares, SearchResearchers — authorization, non-participant rejection, effective status, pagination)
   - Validator tests (CreatePatientDataCommandValidator, CreateDataShareCommandValidator, RegisterResearcherCommandValidator, UpdateResearcherPublicKeysCommandValidator)
 
 **Planned (Not Yet Implemented):**
