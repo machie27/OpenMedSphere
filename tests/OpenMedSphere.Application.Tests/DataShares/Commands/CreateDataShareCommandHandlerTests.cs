@@ -144,6 +144,62 @@ namespace OpenMedSphere.Application.Tests.DataShares.Commands
         }
 
         [Fact]
+        public async Task HandleAsync_SenderKeyVersionMismatch_ReturnsInvalidOperation()
+        {
+            var senderKeys = PublicKeySet.Create("k1", "k2", "k3", "k4", 2);
+            var recipientKeys = PublicKeySet.Create("k1", "k2", "k3", "k4", 1);
+
+            _researcherRepositoryMock
+                .Setup(r => r.GetByIdAsync(SenderId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(Researcher.Create("Sender", "sender@test.com", "MIT", senderKeys));
+
+            _researcherRepositoryMock
+                .Setup(r => r.GetByIdAsync(RecipientId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(Researcher.Create("Recipient", "recipient@test.com", "Harvard", recipientKeys));
+
+            var patientId = PatientIdentifier.Generate();
+            _patientDataRepositoryMock
+                .Setup(r => r.GetByIdAsync(PatientDataIdValue, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(Domain.Entities.PatientData.Create(patientId));
+
+            var command = CreateValidCommand();
+
+            Result<Guid> result = await _handler.HandleAsync(command, CancellationToken.None);
+
+            Assert.True(result.IsFailure);
+            Assert.Equal(ErrorCode.InvalidOperation, result.ErrorCode);
+            Assert.Contains("Sender key version mismatch", result.Error!);
+        }
+
+        [Fact]
+        public async Task HandleAsync_RecipientKeyVersionMismatch_ReturnsInvalidOperation()
+        {
+            var senderKeys = PublicKeySet.Create("k1", "k2", "k3", "k4", 1);
+            var recipientKeys = PublicKeySet.Create("k1", "k2", "k3", "k4", 3);
+
+            _researcherRepositoryMock
+                .Setup(r => r.GetByIdAsync(SenderId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(Researcher.Create("Sender", "sender@test.com", "MIT", senderKeys));
+
+            _researcherRepositoryMock
+                .Setup(r => r.GetByIdAsync(RecipientId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(Researcher.Create("Recipient", "recipient@test.com", "Harvard", recipientKeys));
+
+            var patientId = PatientIdentifier.Generate();
+            _patientDataRepositoryMock
+                .Setup(r => r.GetByIdAsync(PatientDataIdValue, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(Domain.Entities.PatientData.Create(patientId));
+
+            var command = CreateValidCommand();
+
+            Result<Guid> result = await _handler.HandleAsync(command, CancellationToken.None);
+
+            Assert.True(result.IsFailure);
+            Assert.Equal(ErrorCode.InvalidOperation, result.ErrorCode);
+            Assert.Contains("Recipient key version mismatch", result.Error!);
+        }
+
+        [Fact]
         public async Task HandleAsync_InactiveSender_ReturnsInvalidOperation()
         {
             var keys = PublicKeySet.Create("k1", "k2", "k3", "k4", 1);

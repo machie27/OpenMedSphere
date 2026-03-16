@@ -97,7 +97,7 @@ public sealed class DataShare : AggregateRoot<Guid>
     private DataShare(Guid id) : base(id)
     {
         CreatedAtUtc = DateTime.UtcNow;
-        SharedAtUtc = DateTime.UtcNow;
+        SharedAtUtc = CreatedAtUtc;
     }
 
     /// <summary>
@@ -124,6 +124,11 @@ public sealed class DataShare : AggregateRoot<Guid>
         int recipientKeyVersion,
         DateTime? expiresAtUtc = null)
     {
+        if (patientDataId == Guid.Empty)
+        {
+            throw new ArgumentException("Patient data ID cannot be empty.", nameof(patientDataId));
+        }
+
         if (senderResearcherId == recipientResearcherId)
         {
             throw new ArgumentException("Sender and recipient must be different researchers.");

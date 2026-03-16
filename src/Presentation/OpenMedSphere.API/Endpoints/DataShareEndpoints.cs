@@ -101,7 +101,7 @@ public static class DataShareEndpoints
             return Results.Created($"/api/data-shares/{result.Value}", result.Value);
         }
 
-        return MapError(result);
+        return result.MapError();
     }
 
     private static async Task<IResult> GetIncomingAsync(
@@ -126,7 +126,7 @@ public static class DataShareEndpoints
             return Results.Ok(result.Value);
         }
 
-        return MapError(result);
+        return result.MapError();
     }
 
     private static async Task<IResult> GetOutgoingAsync(
@@ -151,7 +151,7 @@ public static class DataShareEndpoints
             return Results.Ok(result.Value);
         }
 
-        return MapError(result);
+        return result.MapError();
     }
 
     private static async Task<IResult> GetByIdAsync(
@@ -174,7 +174,7 @@ public static class DataShareEndpoints
             return Results.Ok(result.Value);
         }
 
-        return MapError(result);
+        return result.MapError();
     }
 
     private static async Task<IResult> AcceptAsync(
@@ -201,7 +201,7 @@ public static class DataShareEndpoints
             return Results.NoContent();
         }
 
-        return MapError(result);
+        return result.MapError();
     }
 
     private static async Task<IResult> RevokeAsync(
@@ -228,17 +228,9 @@ public static class DataShareEndpoints
             return Results.NoContent();
         }
 
-        return MapError(result);
+        return result.MapError();
     }
 
-    private static IResult MapError(Result result) =>
-        result.ErrorCode switch
-        {
-            ErrorCode.NotFound => Results.NotFound(result.Error),
-            ErrorCode.Conflict => Results.Conflict(result.Error),
-            ErrorCode.InvalidOperation => Results.UnprocessableEntity(result.Error),
-            _ => Results.BadRequest(result.Error)
-        };
 }
 
 /// <summary>

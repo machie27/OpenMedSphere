@@ -42,7 +42,7 @@ internal sealed class RegisterResearcherCommandHandler(
         }
         catch (Exception ex) when (
             ex.GetType().Name is "DbUpdateException" &&
-            ex.ToString().Contains("IX_Researchers_Email", StringComparison.Ordinal))
+            ex.InnerException?.Message?.Contains("IX_Researchers_Email", StringComparison.Ordinal) == true)
         {
             // Unique index violation from concurrent insert — the optimistic check above
             // handles the common case; this catches the rare race condition.

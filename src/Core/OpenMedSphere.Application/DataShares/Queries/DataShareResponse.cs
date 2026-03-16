@@ -59,7 +59,8 @@ public sealed record DataShareResponse
     public required DataShareStatus Status { get; init; }
 
     /// <summary>
-    /// Gets the shared date.
+    /// Gets the date and time when the data was shared.
+    /// Currently always equals CreatedAtUtc; separated to support future draft/scheduled share workflows.
     /// </summary>
     public required DateTime SharedAtUtc { get; init; }
 
@@ -106,7 +107,8 @@ public sealed record DataShareSummaryResponse
     public required DataShareStatus Status { get; init; }
 
     /// <summary>
-    /// Gets the shared date.
+    /// Gets the date and time when the data was shared.
+    /// Currently always equals CreatedAtUtc; separated to support future draft/scheduled share workflows.
     /// </summary>
     public required DateTime SharedAtUtc { get; init; }
 

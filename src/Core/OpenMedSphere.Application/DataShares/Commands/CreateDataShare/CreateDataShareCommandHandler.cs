@@ -50,6 +50,18 @@ internal sealed class CreateDataShareCommandHandler(
             return Result<Guid>.NotFound($"Patient data with ID '{command.PatientDataId}' not found.");
         }
 
+        if (command.SenderKeyVersion != sender.PublicKeys.KeyVersion)
+        {
+            return Result<Guid>.InvalidOperation(
+                $"Sender key version mismatch: expected {sender.PublicKeys.KeyVersion}, got {command.SenderKeyVersion}. Fetch the latest public keys before encrypting.");
+        }
+
+        if (command.RecipientKeyVersion != recipient.PublicKeys.KeyVersion)
+        {
+            return Result<Guid>.InvalidOperation(
+                $"Recipient key version mismatch: expected {recipient.PublicKeys.KeyVersion}, got {command.RecipientKeyVersion}. Fetch the latest public keys before encrypting.");
+        }
+
         if (command.ExpiresAtUtc.HasValue && command.ExpiresAtUtc.Value <= DateTime.UtcNow)
         {
             return Result<Guid>.InvalidOperation("Expiry date must be in the future.");

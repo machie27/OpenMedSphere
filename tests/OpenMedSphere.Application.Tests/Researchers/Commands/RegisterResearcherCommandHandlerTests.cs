@@ -99,7 +99,8 @@ namespace OpenMedSphere.Application.Tests.Researchers.Commands
             _unitOfWorkMock
                 .Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new DbUpdateException(
-                    "Cannot insert duplicate key row in object 'dbo.Researchers' with unique index 'IX_Researchers_Email'."));
+                    "An error occurred while saving the entity changes.",
+                    new Exception("duplicate key value violates unique constraint \"IX_Researchers_Email\"")));
 
             RegisterResearcherCommand command = new()
             {
@@ -119,9 +120,9 @@ namespace OpenMedSphere.Application.Tests.Researchers.Commands
             Assert.Contains("smith@university.edu", result.Error!);
         }
 
-        private class DbUpdateException : Exception
+        private class DbUpdateException(string message, Exception? innerException = null)
+            : Exception(message, innerException)
         {
-            public DbUpdateException(string message) : base(message) { }
         }
     }
 }

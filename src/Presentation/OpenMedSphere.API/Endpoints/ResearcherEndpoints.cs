@@ -48,6 +48,7 @@ public static class ResearcherEndpoints
         group.MapGet("/search", SearchAsync)
             .WithName("SearchResearchers")
             .Produces<IReadOnlyList<ResearcherSummaryResponse>>()
+            .Produces(StatusCodes.Status400BadRequest)
             .RequireRateLimiting("fixed");
 
         group.MapPut("/{id:guid}/public-keys", UpdatePublicKeysAsync)
@@ -77,7 +78,7 @@ public static class ResearcherEndpoints
             return Results.Created($"/api/researchers/{result.Value}", result.Value);
         }
 
-        return MapError(result);
+        return result.MapError();
     }
 
     private static async Task<IResult> GetByIdAsync(
@@ -94,7 +95,7 @@ public static class ResearcherEndpoints
             return Results.Ok(result.Value);
         }
 
-        return MapError(result);
+        return result.MapError();
     }
 
     private static async Task<IResult> GetPublicKeysAsync(
@@ -111,7 +112,7 @@ public static class ResearcherEndpoints
             return Results.Ok(result.Value);
         }
 
-        return MapError(result);
+        return result.MapError();
     }
 
     private static async Task<IResult> SearchAsync(
@@ -131,7 +132,7 @@ public static class ResearcherEndpoints
             return Results.Ok(result.Value);
         }
 
-        return MapError(result);
+        return result.MapError();
     }
 
     private static async Task<IResult> UpdatePublicKeysAsync(
@@ -168,17 +169,9 @@ public static class ResearcherEndpoints
             return Results.NoContent();
         }
 
-        return MapError(result);
+        return result.MapError();
     }
 
-    private static IResult MapError(Result result) =>
-        result.ErrorCode switch
-        {
-            ErrorCode.NotFound => Results.NotFound(result.Error),
-            ErrorCode.Conflict => Results.Conflict(result.Error),
-            ErrorCode.InvalidOperation => Results.UnprocessableEntity(result.Error),
-            _ => Results.BadRequest(result.Error)
-        };
 }
 
 /// <summary>

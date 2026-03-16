@@ -72,6 +72,13 @@ namespace OpenMedSphere.Domain.Tests.Entities
         }
 
         [Fact]
+        public void Create_WithEmptyPatientDataId_ThrowsArgumentException()
+        {
+            Assert.Throws<ArgumentException>(() =>
+                DataShare.Create(SenderId, RecipientId, Guid.Empty, "payload", "key", "sig", 1, 1));
+        }
+
+        [Fact]
         public void Create_WithNullEncryptedPayload_ThrowsArgumentException()
         {
             Assert.Throws<ArgumentNullException>(() =>
