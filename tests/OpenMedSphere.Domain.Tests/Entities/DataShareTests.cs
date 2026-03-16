@@ -23,6 +23,10 @@ namespace OpenMedSphere.Domain.Tests.Entities
                 recipientKeyVersion: 1,
                 expiresAtUtc);
 
+        private static void ForceExpiry(DataShare share) =>
+            typeof(DataShare).GetProperty(nameof(DataShare.ExpiresAtUtc))!
+                .SetValue(share, DateTime.UtcNow.AddMinutes(-1));
+
         [Fact]
         public void Create_WithValidArguments_ReturnsDataShareWithCorrectDefaults()
         {
@@ -199,11 +203,10 @@ namespace OpenMedSphere.Domain.Tests.Entities
         }
 
         [Fact]
-        public async Task Revoke_WhenExpired_ThrowsInvalidOperationException()
+        public void Revoke_WhenExpired_ThrowsInvalidOperationException()
         {
-            var share = CreateTestShare(DateTime.UtcNow.AddMilliseconds(50));
-
-            await Task.Delay(100, TestContext.Current.CancellationToken);
+            var share = CreateTestShare(DateTime.UtcNow.AddHours(1));
+            ForceExpiry(share);
 
             Assert.Throws<InvalidOperationException>(() => share.Revoke());
         }
@@ -225,11 +228,10 @@ namespace OpenMedSphere.Domain.Tests.Entities
         }
 
         [Fact]
-        public async Task Accept_WhenExpired_ThrowsInvalidOperationException()
+        public void Accept_WhenExpired_ThrowsInvalidOperationException()
         {
-            var share = CreateTestShare(DateTime.UtcNow.AddMilliseconds(50));
-
-            await Task.Delay(100, TestContext.Current.CancellationToken);
+            var share = CreateTestShare(DateTime.UtcNow.AddHours(1));
+            ForceExpiry(share);
 
             Assert.Throws<InvalidOperationException>(() => share.Accept());
         }
@@ -243,22 +245,20 @@ namespace OpenMedSphere.Domain.Tests.Entities
         }
 
         [Fact]
-        public async Task EffectiveStatus_PendingAndExpired_ReturnsExpired()
+        public void EffectiveStatus_PendingAndExpired_ReturnsExpired()
         {
-            var share = CreateTestShare(DateTime.UtcNow.AddMilliseconds(50));
-
-            await Task.Delay(100, TestContext.Current.CancellationToken);
+            var share = CreateTestShare(DateTime.UtcNow.AddHours(1));
+            ForceExpiry(share);
 
             Assert.Equal(DataShareStatus.Expired, share.EffectiveStatus);
         }
 
         [Fact]
-        public async Task EffectiveStatus_AcceptedAndExpired_ReturnsAccepted()
+        public void EffectiveStatus_AcceptedAndExpired_ReturnsAccepted()
         {
-            var share = CreateTestShare(DateTime.UtcNow.AddMilliseconds(50));
+            var share = CreateTestShare(DateTime.UtcNow.AddHours(1));
             share.Accept();
-
-            await Task.Delay(100, TestContext.Current.CancellationToken);
+            ForceExpiry(share);
 
             Assert.Equal(DataShareStatus.Accepted, share.EffectiveStatus);
         }
@@ -273,12 +273,11 @@ namespace OpenMedSphere.Domain.Tests.Entities
         }
 
         [Fact]
-        public async Task Revoke_WhenAcceptedAndExpired_SetsStatusToRevoked()
+        public void Revoke_WhenAcceptedAndExpired_SetsStatusToRevoked()
         {
-            var share = CreateTestShare(DateTime.UtcNow.AddMilliseconds(50));
+            var share = CreateTestShare(DateTime.UtcNow.AddHours(1));
             share.Accept();
-
-            await Task.Delay(100, TestContext.Current.CancellationToken);
+            ForceExpiry(share);
 
             share.Revoke();
 

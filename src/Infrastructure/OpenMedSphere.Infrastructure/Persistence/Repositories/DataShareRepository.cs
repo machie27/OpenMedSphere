@@ -30,6 +30,7 @@ internal sealed class DataShareRepository(ApplicationDbContext dbContext)
                 RecipientResearcherId = d.RecipientResearcherId,
                 PatientDataId = d.PatientDataId,
                 // EffectiveStatus logic duplicated from DataShare.EffectiveStatus for server-side evaluation.
+                // Uses == instead of 'is' because EF Core expression trees don't support pattern matching.
                 // Only Pending shares transition to Expired; Accepted/Revoked shares keep their status.
                 Status = (d.ExpiresAtUtc.HasValue && d.ExpiresAtUtc.Value <= DateTime.UtcNow && d.Status == DataShareStatus.Pending)
                     ? DataShareStatus.Expired
@@ -58,6 +59,7 @@ internal sealed class DataShareRepository(ApplicationDbContext dbContext)
                 RecipientResearcherId = d.RecipientResearcherId,
                 PatientDataId = d.PatientDataId,
                 // EffectiveStatus logic duplicated from DataShare.EffectiveStatus for server-side evaluation.
+                // Uses == instead of 'is' because EF Core expression trees don't support pattern matching.
                 // Only Pending shares transition to Expired; Accepted/Revoked shares keep their status.
                 Status = (d.ExpiresAtUtc.HasValue && d.ExpiresAtUtc.Value <= DateTime.UtcNow && d.Status == DataShareStatus.Pending)
                     ? DataShareStatus.Expired

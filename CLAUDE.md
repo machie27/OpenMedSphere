@@ -275,6 +275,7 @@ public sealed class MyEntity : AggregateRoot<Guid>
 - **Naming**: `[MethodName]_[TestScenario]_[ExpectedBehavior]`
 - **Test Class Naming**: `[ClassBeingTested]Tests`
 - **No Comment Markers**: DO NOT emit "Arrange", "Act", or "Assert" comments
+- **No `Task.Delay` for time-based tests**: Use reflection to set `init`-only properties (e.g., `ExpiresAtUtc`) to past values instead of sleeping. `DataShare.Create()` validates future dates, so you must create with a valid future expiry then force it to the past via `typeof(T).GetProperty(...).SetValue(...)`. See `DataShareTests.ForceExpiry()` for the pattern.
 - Follow [Unit Testing Best Practices](https://learn.microsoft.com/en-us/dotnet/core/testing/unit-testing-best-practices)
 
 ## Package Management
@@ -340,6 +341,10 @@ AppHost uses User Secrets for local development:
 - **Fixed window** policy (100 requests/minute) for read endpoints (GET)
 - **Write** policy (30 requests/minute) for write endpoints (POST, PUT, DELETE)
 - Returns HTTP 429 when exceeded
+
+### Request Body Size Limit
+- Kestrel `MaxRequestBodySize` set to 10 MB to prevent memory exhaustion before application-layer validation runs
+- Application-layer validators enforce stricter limits (e.g., `MaxEncryptedPayloadLength = 5 MB`)
 
 ### Input Validation
 - Custom `IValidator<T>` pipeline integrated into the mediator

@@ -154,9 +154,10 @@ namespace OpenMedSphere.Application.Tests.DataShares.Commands
             DataShare dataShare = DataShare.Create(
                 SenderId, RecipientId, PatientDataId,
                 "payload", "key", "sig", 1, 1,
-                DateTime.UtcNow.AddMilliseconds(50));
+                DateTime.UtcNow.AddHours(1));
 
-            await Task.Delay(100, TestContext.Current.CancellationToken);
+            typeof(DataShare).GetProperty(nameof(DataShare.ExpiresAtUtc))!
+                .SetValue(dataShare, DateTime.UtcNow.AddMinutes(-1));
 
             _repositoryMock
                 .Setup(r => r.GetByIdAsync(dataShare.Id, It.IsAny<CancellationToken>()))

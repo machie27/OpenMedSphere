@@ -13,6 +13,9 @@ using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.WebHost.ConfigureKestrel(options =>
+    options.Limits.MaxRequestBodySize = 10 * 1024 * 1024); // 10 MB hard cap
+
 builder.AddServiceDefaults();
 
 builder.Services.AddOpenApi(options =>
