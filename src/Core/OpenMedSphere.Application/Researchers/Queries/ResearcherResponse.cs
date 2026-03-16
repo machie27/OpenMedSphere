@@ -2,6 +2,9 @@ namespace OpenMedSphere.Application.Researchers.Queries;
 
 /// <summary>
 /// Response DTO for a researcher.
+/// Email is included here because this endpoint requires the caller to know the researcher's ID
+/// (direct lookup, not enumerable). For GDPR compliance, consider restricting email visibility to
+/// the researcher themselves or authorized collaborators in a future iteration.
 /// </summary>
 public sealed record ResearcherResponse
 {

@@ -124,6 +124,16 @@ public sealed class DataShare : AggregateRoot<Guid>
         int recipientKeyVersion,
         DateTime? expiresAtUtc = null)
     {
+        if (senderResearcherId == Guid.Empty)
+        {
+            throw new ArgumentException("Sender researcher ID cannot be empty.", nameof(senderResearcherId));
+        }
+
+        if (recipientResearcherId == Guid.Empty)
+        {
+            throw new ArgumentException("Recipient researcher ID cannot be empty.", nameof(recipientResearcherId));
+        }
+
         if (patientDataId == Guid.Empty)
         {
             throw new ArgumentException("Patient data ID cannot be empty.", nameof(patientDataId));

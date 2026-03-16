@@ -62,6 +62,8 @@ internal sealed class DataShareConfiguration : IEntityTypeConfiguration<DataShar
         builder.HasIndex(d => d.PatientDataId)
             .HasDatabaseName("IX_DataShares_PatientDataId");
 
+        // Note: DataShareStatus.Expired is computed at query time (never persisted),
+        // so this index covers Pending, Accepted, and Revoked statuses only.
         builder.HasIndex(d => d.Status)
             .HasDatabaseName("IX_DataShares_Status");
 
