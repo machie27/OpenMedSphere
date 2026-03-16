@@ -15,6 +15,8 @@ internal sealed class PatientDataRepository(ApplicationDbContext dbContext)
         string diagnosis,
         CancellationToken cancellationToken = default)
     {
+        // Uses ToLower().Contains() instead of EF.Functions.ILike — EF Core 10 + Npgsql parameterizes
+        // Contains() so user-supplied wildcards are safe, and both generate full-table scans anyway.
         var diagnosisLower = diagnosis.ToLower();
 
         return await DbSet

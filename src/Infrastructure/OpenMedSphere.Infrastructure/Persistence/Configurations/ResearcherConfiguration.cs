@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using OpenMedSphere.Application.Abstractions.Data;
 using OpenMedSphere.Domain.Entities;
 
 namespace OpenMedSphere.Infrastructure.Persistence.Configurations;
@@ -65,7 +66,7 @@ internal sealed class ResearcherConfiguration : IEntityTypeConfiguration<Researc
 
         builder.HasIndex(r => r.Email)
             .IsUnique()
-            .HasDatabaseName("IX_Researchers_Email");
+            .HasDatabaseName(ResearcherIndexNames.EmailUnique);
 
         builder.HasIndex(r => r.Institution)
             .HasDatabaseName("IX_Researchers_Institution");

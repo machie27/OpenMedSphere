@@ -41,12 +41,10 @@ internal sealed class RegisterResearcherCommandHandler(
         {
             await unitOfWork.SaveChangesAsync(cancellationToken);
         }
-        catch (Exception ex) when (uniqueConstraintDetector.IsUniqueConstraintViolation(ex, "IX_Researchers_Email"))
+        catch (Exception ex) when (uniqueConstraintDetector.IsUniqueConstraintViolation(ex, ResearcherIndexNames.EmailUnique))
         {
             // Unique index violation from concurrent insert — the optimistic check above
             // handles the common case; this catches the rare race condition.
-            // IMPORTANT: The index name 'IX_Researchers_Email' must match the name in
-            // ResearcherConfiguration. If the index is renamed, update this string to match.
             return Result<Guid>.Conflict($"A researcher with email '{command.Email}' already exists.");
         }
 

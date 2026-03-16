@@ -3,6 +3,15 @@ using OpenMedSphere.Domain.Entities;
 namespace OpenMedSphere.Application.Abstractions.Data;
 
 /// <summary>
+/// Database index names for the Researcher entity, shared between configuration and handlers
+/// to prevent silent constraint-detection failures if an index is renamed.
+/// </summary>
+public static class ResearcherIndexNames
+{
+    public const string EmailUnique = "IX_Researchers_Email";
+}
+
+/// <summary>
 /// Repository interface for researchers.
 /// </summary>
 public interface IResearcherRepository : IRepository<Researcher, Guid>

@@ -29,6 +29,8 @@ internal sealed class ResearchStudyRepository(ApplicationDbContext dbContext)
         string researchArea,
         CancellationToken cancellationToken = default)
     {
+        // Uses ToLower().Contains() instead of EF.Functions.ILike — EF Core 10 + Npgsql parameterizes
+        // Contains() so user-supplied wildcards are safe, and both generate full-table scans anyway.
         var areaLower = researchArea.ToLower();
 
         return await DbSet

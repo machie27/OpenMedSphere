@@ -33,7 +33,7 @@ internal sealed class AcceptDataShareCommandHandler(
 
         if (dataShare.Status is not DataShareStatus.Pending)
         {
-            return Result.InvalidOperation($"Cannot accept a data share with status '{dataShare.Status}'.");
+            return Result.InvalidOperation($"Cannot accept a data share with status '{dataShare.EffectiveStatus}'.");
         }
 
         if (dataShare.IsExpired())

@@ -9,6 +9,11 @@ namespace OpenMedSphere.Infrastructure.Persistence.Repositories;
 /// <summary>
 /// Repository implementation for data shares.
 /// </summary>
+/// <remarks>
+/// TODO: Extract the EffectiveStatus projection into a shared <c>Expression&lt;Func&lt;DataShare, DataShareStatus&gt;&gt;</c>
+/// so the logic lives in one place (currently duplicated in GetIncomingSharesAsync, GetOutgoingSharesAsync,
+/// and <see cref="DataShare.EffectiveStatus"/>).
+/// </remarks>
 internal sealed class DataShareRepository(ApplicationDbContext dbContext)
     : Repository<DataShare, Guid>(dbContext), IDataShareRepository
 {
