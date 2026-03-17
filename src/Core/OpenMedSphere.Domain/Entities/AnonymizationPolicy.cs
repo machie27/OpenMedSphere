@@ -12,37 +12,37 @@ public sealed class AnonymizationPolicy : AggregateRoot<Guid>
     /// <summary>
     /// Gets the name of the anonymization policy.
     /// </summary>
-    public required string Name { get; set; }
+    public string Name { get; private set; } = null!;
 
     /// <summary>
     /// Gets the description of the anonymization policy.
     /// </summary>
-    public string? Description { get; set; }
+    public string? Description { get; private set; }
 
     /// <summary>
     /// Gets the anonymization level applied by this policy.
     /// </summary>
-    public required AnonymizationLevel Level { get; set; }
+    public AnonymizationLevel Level { get; private set; }
 
     /// <summary>
     /// Gets a value indicating whether date of birth should be generalized (year only).
     /// </summary>
-    public bool GeneralizeDateOfBirth { get; set; }
+    public bool GeneralizeDateOfBirth { get; private set; }
 
     /// <summary>
     /// Gets a value indicating whether location data should be generalized (e.g., zip code to region).
     /// </summary>
-    public bool GeneralizeLocation { get; set; }
+    public bool GeneralizeLocation { get; private set; }
 
     /// <summary>
     /// Gets a value indicating whether rare diagnoses should be suppressed or generalized.
     /// </summary>
-    public bool SuppressRareDiagnoses { get; set; }
+    public bool SuppressRareDiagnoses { get; private set; }
 
     /// <summary>
     /// Gets the minimum group size for k-anonymity (if applicable).
     /// </summary>
-    public int? KAnonymityThreshold { get; set; }
+    public int? KAnonymityThreshold { get; private set; }
 
     /// <summary>
     /// Gets the date and time when the policy was created.
@@ -52,12 +52,12 @@ public sealed class AnonymizationPolicy : AggregateRoot<Guid>
     /// <summary>
     /// Gets the date and time when the policy was last updated.
     /// </summary>
-    public DateTime? UpdatedAtUtc { get; set; }
+    public DateTime? UpdatedAtUtc { get; private set; }
 
     /// <summary>
     /// Gets a value indicating whether the policy is active.
     /// </summary>
-    public bool IsActive { get; set; }
+    public bool IsActive { get; private set; }
 
     /// <summary>
     /// Required for EF Core.

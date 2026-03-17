@@ -106,7 +106,7 @@ namespace OpenMedSphere.Application.Tests.Researchers.Commands
                 .ThrowsAsync(savedException);
 
             _uniqueConstraintDetectorMock
-                .Setup(d => d.IsUniqueConstraintViolation(savedException, "IX_Researchers_Email"))
+                .Setup(d => d.IsUniqueConstraintViolation(savedException, ResearcherIndexNames.EmailUnique))
                 .Returns(true);
 
             RegisterResearcherCommand command = new()

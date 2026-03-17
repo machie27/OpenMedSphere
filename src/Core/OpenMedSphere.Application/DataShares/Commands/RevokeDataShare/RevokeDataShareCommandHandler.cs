@@ -10,7 +10,8 @@ namespace OpenMedSphere.Application.DataShares.Commands.RevokeDataShare;
 /// </summary>
 internal sealed class RevokeDataShareCommandHandler(
     IDataShareRepository repository,
-    IUnitOfWork unitOfWork)
+    IUnitOfWork unitOfWork,
+    IConcurrencyConflictDetector concurrencyDetector)
     : ICommandHandler<RevokeDataShareCommand>
 {
     /// <inheritdoc />
@@ -43,8 +44,15 @@ internal sealed class RevokeDataShareCommandHandler(
 
         dataShare.Revoke();
 
-        repository.Update(dataShare);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        try
+        {
+            repository.Update(dataShare);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception ex) when (concurrencyDetector.IsConcurrencyConflict(ex))
+        {
+            return Result.Conflict("The data share was modified concurrently. Please retry.");
+        }
 
         return Result.Success();
     }

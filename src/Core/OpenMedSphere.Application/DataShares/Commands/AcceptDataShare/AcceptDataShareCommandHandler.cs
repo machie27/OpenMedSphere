@@ -10,7 +10,8 @@ namespace OpenMedSphere.Application.DataShares.Commands.AcceptDataShare;
 /// </summary>
 internal sealed class AcceptDataShareCommandHandler(
     IDataShareRepository repository,
-    IUnitOfWork unitOfWork)
+    IUnitOfWork unitOfWork,
+    IConcurrencyConflictDetector concurrencyDetector)
     : ICommandHandler<AcceptDataShareCommand>
 {
     /// <inheritdoc />
@@ -31,20 +32,22 @@ internal sealed class AcceptDataShareCommandHandler(
             return Result.NotFound($"Data share with ID '{command.DataShareId}' not found.");
         }
 
-        if (dataShare.Status is not DataShareStatus.Pending)
+        if (dataShare.EffectiveStatus is not DataShareStatus.Pending)
         {
             return Result.InvalidOperation($"Cannot accept a data share with status '{dataShare.EffectiveStatus}'.");
         }
 
-        if (dataShare.IsExpired())
-        {
-            return Result.InvalidOperation("Cannot accept an expired data share.");
-        }
-
         dataShare.Accept();
 
-        repository.Update(dataShare);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        try
+        {
+            repository.Update(dataShare);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception ex) when (concurrencyDetector.IsConcurrencyConflict(ex))
+        {
+            return Result.Conflict("The data share was modified concurrently. Please retry.");
+        }
 
         return Result.Success();
     }

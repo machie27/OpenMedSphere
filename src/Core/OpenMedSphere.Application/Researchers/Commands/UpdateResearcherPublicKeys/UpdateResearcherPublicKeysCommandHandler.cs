@@ -10,7 +10,8 @@ namespace OpenMedSphere.Application.Researchers.Commands.UpdateResearcherPublicK
 /// </summary>
 internal sealed class UpdateResearcherPublicKeysCommandHandler(
     IResearcherRepository repository,
-    IUnitOfWork unitOfWork)
+    IUnitOfWork unitOfWork,
+    IConcurrencyConflictDetector concurrencyDetector)
     : ICommandHandler<UpdateResearcherPublicKeysCommand>
 {
     /// <inheritdoc />
@@ -45,8 +46,15 @@ internal sealed class UpdateResearcherPublicKeysCommandHandler(
 
         researcher.RotateKeys(newPublicKeys);
 
-        repository.Update(researcher);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        try
+        {
+            repository.Update(researcher);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception ex) when (concurrencyDetector.IsConcurrencyConflict(ex))
+        {
+            return Result.Conflict("The researcher was modified concurrently. Please retry.");
+        }
 
         return Result.Success();
     }

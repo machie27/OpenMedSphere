@@ -190,9 +190,10 @@ public sealed class DataShare : AggregateRoot<Guid>
             throw new InvalidOperationException("Cannot accept an expired data share.");
         }
 
+        var now = DateTime.UtcNow;
         Status = DataShareStatus.Accepted;
-        AccessedAtUtc = DateTime.UtcNow;
-        UpdatedAtUtc = DateTime.UtcNow;
+        AccessedAtUtc = now;
+        UpdatedAtUtc = now;
 
         RaiseDomainEvent(new DataShareAccessedEvent(Id, RecipientResearcherId));
     }

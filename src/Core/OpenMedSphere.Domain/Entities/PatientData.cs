@@ -272,6 +272,11 @@ public sealed class PatientData : AggregateRoot<Guid>
     /// <param name="policyId">The ID of the anonymization policy applied.</param>
     public void MarkAsAnonymized(Guid policyId)
     {
+        if (IsAnonymized)
+        {
+            throw new InvalidOperationException("Patient data has already been anonymized.");
+        }
+
         AnonymizationPolicyId = policyId;
         AnonymizedAtUtc = DateTime.UtcNow;
         IsAnonymized = true;

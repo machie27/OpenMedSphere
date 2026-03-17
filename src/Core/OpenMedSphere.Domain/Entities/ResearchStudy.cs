@@ -20,32 +20,32 @@ public sealed class ResearchStudy : AggregateRoot<Guid>
     /// <summary>
     /// Gets the title of the research study.
     /// </summary>
-    public required string Title { get; set; }
+    public string Title { get; private set; } = null!;
 
     /// <summary>
     /// Gets the description of the research study.
     /// </summary>
-    public string? Description { get; set; }
+    public string? Description { get; private set; }
 
     /// <summary>
     /// Gets the principal investigator's name.
     /// </summary>
-    public required string PrincipalInvestigator { get; set; }
+    public string PrincipalInvestigator { get; private set; } = null!;
 
     /// <summary>
     /// Gets the institution conducting the study.
     /// </summary>
-    public required string Institution { get; set; }
+    public string Institution { get; private set; } = null!;
 
     /// <summary>
     /// Gets the date range for the study.
     /// </summary>
-    public required DateRange StudyPeriod { get; set; }
+    public DateRange StudyPeriod { get; private set; } = null!;
 
     /// <summary>
     /// Gets the ID of the anonymization policy required for this study.
     /// </summary>
-    public required Guid AnonymizationPolicyId { get; set; }
+    public Guid AnonymizationPolicyId { get; private set; }
 
     /// <summary>
     /// Gets the list of patient data IDs included in this study.
@@ -55,7 +55,7 @@ public sealed class ResearchStudy : AggregateRoot<Guid>
     /// <summary>
     /// Gets the maximum number of participants allowed in the study.
     /// </summary>
-    public int? MaxParticipants { get; set; }
+    public int? MaxParticipants { get; private set; }
 
     /// <summary>
     /// Gets the current number of participants in the study.
@@ -65,12 +65,12 @@ public sealed class ResearchStudy : AggregateRoot<Guid>
     /// <summary>
     /// Gets the research area or field of study.
     /// </summary>
-    public string? ResearchArea { get; set; }
+    public string? ResearchArea { get; private set; }
 
     /// <summary>
     /// Gets a value indicating whether the study is currently active.
     /// </summary>
-    public bool IsActive { get; set; }
+    public bool IsActive { get; private set; }
 
     /// <summary>
     /// Gets the date and time when the study was created.
@@ -80,7 +80,7 @@ public sealed class ResearchStudy : AggregateRoot<Guid>
     /// <summary>
     /// Gets the date and time when the study was last updated.
     /// </summary>
-    public DateTime? UpdatedAtUtc { get; set; }
+    public DateTime? UpdatedAtUtc { get; private set; }
 
     /// <summary>
     /// Required for EF Core.
@@ -208,6 +208,11 @@ public sealed class ResearchStudy : AggregateRoot<Guid>
     /// <exception cref="InvalidOperationException">Thrown when the study has reached maximum participants.</exception>
     public void AddPatientData(Guid patientDataId)
     {
+        if (!IsActive)
+        {
+            throw new InvalidOperationException("Cannot add patient data to an inactive study.");
+        }
+
         if (MaxParticipants.HasValue && CurrentParticipantCount >= MaxParticipants.Value)
         {
             throw new InvalidOperationException("Study has reached maximum number of participants.");

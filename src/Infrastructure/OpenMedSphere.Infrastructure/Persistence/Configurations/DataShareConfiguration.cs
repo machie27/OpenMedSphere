@@ -53,11 +53,14 @@ internal sealed class DataShareConfiguration : IEntityTypeConfiguration<DataShar
         builder.Property(d => d.CreatedAtUtc);
         builder.Property(d => d.UpdatedAtUtc);
 
-        builder.HasIndex(d => d.SenderResearcherId)
-            .HasDatabaseName("IX_DataShares_SenderResearcherId");
+        builder.Property<uint>("xmin")
+            .IsRowVersion();
 
-        builder.HasIndex(d => d.RecipientResearcherId)
-            .HasDatabaseName("IX_DataShares_RecipientResearcherId");
+        builder.HasIndex(d => new { d.SenderResearcherId, d.SharedAtUtc })
+            .HasDatabaseName("IX_DataShares_SenderResearcherId_SharedAtUtc");
+
+        builder.HasIndex(d => new { d.RecipientResearcherId, d.SharedAtUtc })
+            .HasDatabaseName("IX_DataShares_RecipientResearcherId_SharedAtUtc");
 
         builder.HasIndex(d => d.PatientDataId)
             .HasDatabaseName("IX_DataShares_PatientDataId");

@@ -149,7 +149,7 @@ dotnet run --project src/Presentation/OpenMedSphere.API/OpenMedSphere.API.csproj
 
 ### Testing
 ```bash
-# Run all tests (242 tests: 152 domain + 90 application)
+# Run all tests (266 tests: 158 domain + 108 application)
 dotnet test OpenMedSphere.slnx
 
 # Run domain tests only
@@ -262,6 +262,7 @@ public sealed class MyEntity : AggregateRoot<Guid>
 - Handler preconditions must be a superset of domain method guards — if the domain throws, it escapes as an unhandled 500
 - Use `Guid.CreateVersion7()` for all new entity IDs (better index performance, time-sortable)
 - **Concurrent unique constraint handling**: Use `IUniqueConstraintViolationDetector` (Application abstraction) to detect database unique constraint violations without coupling to EF Core/Npgsql types — do NOT string-match on exception type names or inner exception messages
+- **Optimistic concurrency handling**: Use `IConcurrencyConflictDetector` (Application abstraction) to detect `DbUpdateConcurrencyException` without coupling to EF Core types. Handlers that mutate contested entities (Accept/Revoke DataShare, key rotation) should catch concurrency conflicts and return `Result.Conflict()`. PostgreSQL `xmin` row version tokens are configured on `DataShare` and `Researcher` entities via EF Core `IsRowVersion()`
 
 ### API Endpoint Patterns
 - Use `if`/`else` with a `MapError()` switch expression — avoid nested ternary operators for Result-to-IResult mapping
@@ -386,15 +387,18 @@ GitHub Actions workflow (`.github/workflows/pr-validation.yml`):
   - Custom validation pipeline (`IValidator<T>`, `ValidationResult`)
   - Specification pattern for complex queries
   - `IUniqueConstraintViolationDetector` abstraction for database constraint error detection without EF Core coupling
+  - `IConcurrencyConflictDetector` abstraction for optimistic concurrency conflict detection without EF Core coupling
 - **Infrastructure Layer (complete):**
   - EF Core with PostgreSQL via Npgsql
   - Generic repository pattern with specification evaluator
   - `NpgsqlUniqueConstraintViolationDetector` — implements `IUniqueConstraintViolationDetector` using PostgreSQL error code 23505
-  - ICD-11 medical terminology integration (API + fallback static dataset)
+  - `EfCoreConcurrencyConflictDetector` — implements `IConcurrencyConflictDetector` using `DbUpdateConcurrencyException`
+  - ICD-11 medical terminology integration (API + fallback static dataset, mutually exclusive registration)
   - HybridCache (`Microsoft.Extensions.Caching.Hybrid`) for ICD-11 API response caching
-  - Audit logging via SaveChangesInterceptor
+  - Audit logging via SaveChangesInterceptor (both sync and async overrides)
+  - Optimistic concurrency via PostgreSQL `xmin` row version on DataShare and Researcher
   - FK constraints on DataShare → Researcher and PatientData (with Restrict delete)
-  - Database indexes on key query columns
+  - Composite indexes on DataShare `(SenderResearcherId, SharedAtUtc)` and `(RecipientResearcherId, SharedAtUtc)` for paginated list queries
 - **API Layer (complete):**
   - JWT Bearer authentication on all endpoints
   - Rate limiting (fixed window for reads, write policy for mutations)
@@ -413,8 +417,9 @@ GitHub Actions workflow (`.github/workflows/pr-validation.yml`):
   - Base64 format validation on all cryptographic fields (public keys, encrypted payload, encapsulated key, signature)
   - Paginated incoming/outgoing share list and researcher search endpoints (default 20, max 100)
   - Handler-level precondition checks for state transitions (no exception-driven control flow)
-  - Anti-enumeration: Accept/Revoke handlers return NotFound for unauthorized callers (prevents share ID enumeration)
-- **Testing (242 tests: 152 domain + 90 application):**
+  - Anti-enumeration: Accept/Revoke/CreateDataShare handlers return NotFound for unauthorized callers and inactive recipients (prevents share ID and researcher enumeration)
+  - Optimistic concurrency on Accept/Revoke/UpdatePublicKeys handlers via `IConcurrencyConflictDetector`
+- **Testing (266 tests: 158 domain + 108 application):**
   - Domain entity tests (PatientData, ResearchStudy, AnonymizationPolicy, Researcher, DataShare)
   - Value object tests (PatientIdentifier, DateRange, StudyCode, MedicalCode, PublicKeySet)
   - Command handler tests with Moq (CreatePatientData, AnonymizePatientData, CreateResearchStudy, CreateAnonymizationPolicy, RegisterResearcher, CreateDataShare, AcceptDataShare, RevokeDataShare, UpdateResearcherPublicKeys)
@@ -439,7 +444,8 @@ GitHub Actions workflow (`.github/workflows/pr-validation.yml`):
 - Rate limiting to prevent abuse
 - Audit logging for compliance tracking
 - E2E encrypted data sharing with zero-knowledge server architecture
-- Anti-enumeration on all data share endpoints — unauthorized callers always receive NotFound (never a distinct error that leaks existence)
+- Anti-enumeration on all data share endpoints — unauthorized callers always receive NotFound (never a distinct error that leaks existence or active status)
+- Optimistic concurrency protection on DataShare and Researcher entities via PostgreSQL `xmin` row version tokens
 - Hybrid quantum-safe cryptography: ML-KEM-768 + X25519 (key agreement), ML-DSA-65 + ECDSA (signatures), AES-256-GCM (symmetric)
 - Future: Implement HIPAA and GDPR compliance requirements
 - Future: Client-side crypto via Rust WASM for data at rest and in transit

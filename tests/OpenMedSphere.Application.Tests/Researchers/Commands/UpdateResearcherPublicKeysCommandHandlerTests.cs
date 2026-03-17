@@ -12,12 +12,14 @@ namespace OpenMedSphere.Application.Tests.Researchers.Commands
     {
         private readonly Mock<IResearcherRepository> _repositoryMock;
         private readonly Mock<IUnitOfWork> _unitOfWorkMock;
+        private readonly Mock<IConcurrencyConflictDetector> _concurrencyDetectorMock;
         private readonly UpdateResearcherPublicKeysCommandHandler _handler;
 
         public UpdateResearcherPublicKeysCommandHandlerTests()
         {
             _repositoryMock = new Mock<IResearcherRepository>();
             _unitOfWorkMock = new Mock<IUnitOfWork>();
+            _concurrencyDetectorMock = new Mock<IConcurrencyConflictDetector>();
 
             _unitOfWorkMock
                 .Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
@@ -25,7 +27,8 @@ namespace OpenMedSphere.Application.Tests.Researchers.Commands
 
             _handler = new UpdateResearcherPublicKeysCommandHandler(
                 _repositoryMock.Object,
-                _unitOfWorkMock.Object);
+                _unitOfWorkMock.Object,
+                _concurrencyDetectorMock.Object);
         }
 
         private static Researcher CreateResearcherWithKeyVersion(int keyVersion)

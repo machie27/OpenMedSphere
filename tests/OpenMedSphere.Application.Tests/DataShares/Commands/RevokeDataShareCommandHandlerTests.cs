@@ -12,6 +12,7 @@ namespace OpenMedSphere.Application.Tests.DataShares.Commands
     {
         private readonly Mock<IDataShareRepository> _repositoryMock;
         private readonly Mock<IUnitOfWork> _unitOfWorkMock;
+        private readonly Mock<IConcurrencyConflictDetector> _concurrencyDetectorMock;
         private readonly RevokeDataShareCommandHandler _handler;
 
         private static readonly Guid SenderId = Guid.NewGuid();
@@ -22,6 +23,7 @@ namespace OpenMedSphere.Application.Tests.DataShares.Commands
         {
             _repositoryMock = new Mock<IDataShareRepository>();
             _unitOfWorkMock = new Mock<IUnitOfWork>();
+            _concurrencyDetectorMock = new Mock<IConcurrencyConflictDetector>();
 
             _unitOfWorkMock
                 .Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
@@ -29,7 +31,8 @@ namespace OpenMedSphere.Application.Tests.DataShares.Commands
 
             _handler = new RevokeDataShareCommandHandler(
                 _repositoryMock.Object,
-                _unitOfWorkMock.Object);
+                _unitOfWorkMock.Object,
+                _concurrencyDetectorMock.Object);
         }
 
         private static DataShare CreatePendingDataShare()

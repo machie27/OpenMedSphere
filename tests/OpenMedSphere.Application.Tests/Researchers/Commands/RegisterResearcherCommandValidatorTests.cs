@@ -103,5 +103,82 @@ namespace OpenMedSphere.Application.Tests.Researchers.Commands
             Assert.False(result.IsValid);
             Assert.Contains(result.Errors, e => e.PropertyName == nameof(command.Name));
         }
+
+        [Fact]
+        public async Task ValidateAsync_WhitespaceName_ReturnsError()
+        {
+            var command = CreateValidCommand() with { Name = "   " };
+
+            var result = await _validator.ValidateAsync(command, TestContext.Current.CancellationToken);
+
+            Assert.False(result.IsValid);
+            Assert.Contains(result.Errors, e => e.PropertyName == nameof(command.Name));
+        }
+
+        [Fact]
+        public async Task ValidateAsync_OverLengthEmail_ReturnsError()
+        {
+            var command = CreateValidCommand() with { Email = new string('a', 310) + "@example.com" };
+
+            var result = await _validator.ValidateAsync(command, TestContext.Current.CancellationToken);
+
+            Assert.False(result.IsValid);
+            Assert.Contains(result.Errors, e => e.PropertyName == nameof(command.Email));
+        }
+
+        [Fact]
+        public async Task ValidateAsync_WhitespaceInstitution_ReturnsError()
+        {
+            var command = CreateValidCommand() with { Institution = "   " };
+
+            var result = await _validator.ValidateAsync(command, TestContext.Current.CancellationToken);
+
+            Assert.False(result.IsValid);
+            Assert.Contains(result.Errors, e => e.PropertyName == nameof(command.Institution));
+        }
+
+        [Fact]
+        public async Task ValidateAsync_OverLengthInstitution_ReturnsError()
+        {
+            var command = CreateValidCommand() with { Institution = new string('a', 301) };
+
+            var result = await _validator.ValidateAsync(command, TestContext.Current.CancellationToken);
+
+            Assert.False(result.IsValid);
+            Assert.Contains(result.Errors, e => e.PropertyName == nameof(command.Institution));
+        }
+
+        [Fact]
+        public async Task ValidateAsync_InvalidBase64MlDsaPublicKey_ReturnsError()
+        {
+            var command = CreateValidCommand() with { MlDsaPublicKey = "not-base64!!!" };
+
+            var result = await _validator.ValidateAsync(command, TestContext.Current.CancellationToken);
+
+            Assert.False(result.IsValid);
+            Assert.Contains(result.Errors, e => e.PropertyName == nameof(command.MlDsaPublicKey));
+        }
+
+        [Fact]
+        public async Task ValidateAsync_InvalidBase64X25519PublicKey_ReturnsError()
+        {
+            var command = CreateValidCommand() with { X25519PublicKey = "not-base64!!!" };
+
+            var result = await _validator.ValidateAsync(command, TestContext.Current.CancellationToken);
+
+            Assert.False(result.IsValid);
+            Assert.Contains(result.Errors, e => e.PropertyName == nameof(command.X25519PublicKey));
+        }
+
+        [Fact]
+        public async Task ValidateAsync_InvalidBase64EcdsaPublicKey_ReturnsError()
+        {
+            var command = CreateValidCommand() with { EcdsaPublicKey = "not-base64!!!" };
+
+            var result = await _validator.ValidateAsync(command, TestContext.Current.CancellationToken);
+
+            Assert.False(result.IsValid);
+            Assert.Contains(result.Errors, e => e.PropertyName == nameof(command.EcdsaPublicKey));
+        }
     }
 }

@@ -33,14 +33,9 @@ internal sealed class CreateDataShareCommandHandler(
 
         var recipient = await researcherRepository.GetByIdAsync(command.RecipientResearcherId, cancellationToken);
 
-        if (recipient is null)
+        if (recipient is null || !recipient.IsActive)
         {
             return Result<Guid>.NotFound($"Recipient researcher with ID '{command.RecipientResearcherId}' not found.");
-        }
-
-        if (!recipient.IsActive)
-        {
-            return Result<Guid>.InvalidOperation("Recipient researcher is not active.");
         }
 
         var patientData = await patientDataRepository.GetByIdAsync(command.PatientDataId, cancellationToken);
@@ -50,9 +45,10 @@ internal sealed class CreateDataShareCommandHandler(
             return Result<Guid>.NotFound($"Patient data with ID '{command.PatientDataId}' not found.");
         }
 
-        // Key versions are validated synchronously before DataShare.Create to prevent
-        // stale-key encryption. No async gaps between this check and the domain call,
-        // so the values cannot change between validation and use (no TOCTOU race).
+        // Key versions are validated before DataShare.Create to prevent stale-key encryption.
+        // Note: a concurrent key rotation between the reads above and this check is possible
+        // (small TOCTOU window), but the xmin concurrency token will cause SaveChanges to fail
+        // if the researcher was modified in the interim.
         if (command.SenderKeyVersion != sender.PublicKeys.KeyVersion)
         {
             return Result<Guid>.InvalidOperation(

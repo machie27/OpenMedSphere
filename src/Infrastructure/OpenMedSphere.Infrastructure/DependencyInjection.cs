@@ -62,6 +62,7 @@ public static class DependencyInjection
         services.AddScoped<IResearcherRepository, ResearcherRepository>();
         services.AddScoped<IDataShareRepository, DataShareRepository>();
         services.AddSingleton<IUniqueConstraintViolationDetector, NpgsqlUniqueConstraintViolationDetector>();
+        services.AddSingleton<IConcurrencyConflictDetector, EfCoreConcurrencyConflictDetector>();
     }
 
     private static void AddMedicalTerminology(IServiceCollection services, IConfiguration configuration)
@@ -80,13 +81,11 @@ public static class DependencyInjection
             };
         });
 
-        // Always register the fallback provider for baseline ICD-11 lookup
-        services.AddSingleton<IMedicalTerminologyProvider, FallbackTerminologyProvider>();
-
         if (icd11Options.IsConfigured)
         {
-            // When ICD-11 API is configured, also register the API-backed provider
-            services.AddTransient<Icd11AuthenticationHandler>();
+            // When ICD-11 API is configured, register the API-backed provider.
+            // Singleton lifetime preserves token caching and SemaphoreSlim coordination.
+            services.AddSingleton<Icd11AuthenticationHandler>();
 
             services.AddHttpClient<IMedicalTerminologyProvider, Icd11TerminologyProvider>(client =>
             {
@@ -95,6 +94,11 @@ public static class DependencyInjection
                     new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
             })
             .AddHttpMessageHandler<Icd11AuthenticationHandler>();
+        }
+        else
+        {
+            // Fallback provider for when ICD-11 API is not configured
+            services.AddSingleton<IMedicalTerminologyProvider, FallbackTerminologyProvider>();
         }
 
         // Composite service aggregates all registered providers

@@ -32,6 +32,9 @@ internal sealed class ResearcherConfiguration : IEntityTypeConfiguration<Researc
         builder.Property(r => r.CreatedAtUtc);
         builder.Property(r => r.UpdatedAtUtc);
 
+        builder.Property<uint>("xmin")
+            .IsRowVersion();
+
         // Column max lengths (10,000) are intentionally larger than the application-layer
         // validation limit (MaxBase64KeyLength = 4,000) to provide headroom for future key
         // formats without requiring a database migration. The validator is the enforcement point.

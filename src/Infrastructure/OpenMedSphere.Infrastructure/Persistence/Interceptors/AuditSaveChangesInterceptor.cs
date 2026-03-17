@@ -33,17 +33,31 @@ internal sealed class AuditSaveChangesInterceptor : SaveChangesInterceptor
     };
 
     /// <inheritdoc />
+    public override InterceptionResult<int> SavingChanges(
+        DbContextEventData eventData,
+        InterceptionResult<int> result)
+    {
+        AddAuditEntries(eventData.Context);
+        return base.SavingChanges(eventData, result);
+    }
+
+    /// <inheritdoc />
     public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
         DbContextEventData eventData,
         InterceptionResult<int> result,
         CancellationToken cancellationToken = default)
     {
-        if (eventData.Context is null)
+        AddAuditEntries(eventData.Context);
+        return base.SavingChangesAsync(eventData, result, cancellationToken);
+    }
+
+    private static void AddAuditEntries(DbContext? context)
+    {
+        if (context is null)
         {
-            return base.SavingChangesAsync(eventData, result, cancellationToken);
+            return;
         }
 
-        DbContext context = eventData.Context;
         List<AuditLogEntry> auditEntries = [];
 
         foreach (EntityEntry entry in context.ChangeTracker.Entries())
@@ -101,8 +115,6 @@ internal sealed class AuditSaveChangesInterceptor : SaveChangesInterceptor
         {
             context.Set<AuditLogEntry>().AddRange(auditEntries);
         }
-
-        return base.SavingChangesAsync(eventData, result, cancellationToken);
     }
 
     private static string SerializeValues(EntityEntry entry, bool useOriginalValues)

@@ -219,7 +219,21 @@ namespace OpenMedSphere.Application.Tests.DataShares.Commands
         }
 
         [Fact]
-        public async Task HandleAsync_InactiveRecipient_ReturnsInvalidOperation()
+        public async Task HandleAsync_PastExpiryAtHandlerLevel_ReturnsInvalidOperation()
+        {
+            SetupValidEntities();
+
+            var command = CreateValidCommand() with { ExpiresAtUtc = DateTime.UtcNow.AddMinutes(-1) };
+
+            Result<Guid> result = await _handler.HandleAsync(command, CancellationToken.None);
+
+            Assert.True(result.IsFailure);
+            Assert.Equal(ErrorCode.InvalidOperation, result.ErrorCode);
+            Assert.Contains("Expiry", result.Error!, StringComparison.OrdinalIgnoreCase);
+        }
+
+        [Fact]
+        public async Task HandleAsync_InactiveRecipient_ReturnsNotFound()
         {
             var keys = PublicKeySet.Create("k1", "k2", "k3", "k4", 1);
 
@@ -242,8 +256,7 @@ namespace OpenMedSphere.Application.Tests.DataShares.Commands
             Result<Guid> result = await _handler.HandleAsync(CreateValidCommand(), CancellationToken.None);
 
             Assert.True(result.IsFailure);
-            Assert.Equal(ErrorCode.InvalidOperation, result.ErrorCode);
-            Assert.Contains("Recipient", result.Error!, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal(ErrorCode.NotFound, result.ErrorCode);
         }
     }
 }
