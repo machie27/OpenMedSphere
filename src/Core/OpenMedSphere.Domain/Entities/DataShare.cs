@@ -238,6 +238,10 @@ public sealed class DataShare : AggregateRoot<Guid>
     /// remains Accepted (the data was already accessed). Clients should inspect
     /// <see cref="ExpiresAtUtc"/> directly to determine whether the access window is still open.
     /// </summary>
+    /// <remarks>
+    /// The EF Core expression tree equivalent is <c>DataShareProjections.ToSummary</c>
+    /// in the Application layer. Both must stay in sync.
+    /// </remarks>
     public DataShareStatus EffectiveStatus =>
         IsExpired() && Status is DataShareStatus.Pending ? DataShareStatus.Expired : Status;
 }

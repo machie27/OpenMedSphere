@@ -66,6 +66,7 @@ public static class ResearcherEndpoints
     // Registration is a special case: no researcher ID exists in JWT yet.
     // Authorization is provided by JWT authentication (RequireAuthorization on the group)
     // and email uniqueness (DB unique index prevents duplicate registrations).
+    // Future: require an invitation token or admin approval before registration.
     private static async Task<IResult> RegisterAsync(
         RegisterResearcherCommand command,
         IMediator mediator,

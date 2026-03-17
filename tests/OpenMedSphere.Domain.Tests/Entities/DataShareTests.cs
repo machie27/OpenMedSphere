@@ -24,8 +24,11 @@ namespace OpenMedSphere.Domain.Tests.Entities
                 expiresAtUtc);
 
         private static void ForceExpiry(DataShare share) =>
+            ForceExpiryTo(share, DateTime.UtcNow.AddMinutes(-1));
+
+        private static void ForceExpiryTo(DataShare share, DateTime expiresAtUtc) =>
             typeof(DataShare).GetProperty(nameof(DataShare.ExpiresAtUtc))!
-                .SetValue(share, DateTime.UtcNow.AddMinutes(-1));
+                .SetValue(share, (DateTime?)expiresAtUtc);
 
         [Fact]
         public void Create_WithValidArguments_ReturnsDataShareWithCorrectDefaults()
@@ -283,5 +286,23 @@ namespace OpenMedSphere.Domain.Tests.Entities
 
             Assert.Equal(DataShareStatus.Revoked, share.Status);
         }
+
+        [Fact]
+        public void EffectiveStatus_PendingAndExpiryJustPast_ReturnsExpired()
+        {
+            var share = CreateTestShare(DateTime.UtcNow.AddHours(1));
+            ForceExpiryTo(share, DateTime.UtcNow.AddMilliseconds(-1));
+
+            Assert.Equal(DataShareStatus.Expired, share.EffectiveStatus);
+        }
+
+        [Fact]
+        public void EffectiveStatus_PendingAndExpiryJustFuture_ReturnsPending()
+        {
+            var share = CreateTestShare(DateTime.UtcNow.AddSeconds(1));
+
+            Assert.Equal(DataShareStatus.Pending, share.EffectiveStatus);
+        }
     }
 }
+

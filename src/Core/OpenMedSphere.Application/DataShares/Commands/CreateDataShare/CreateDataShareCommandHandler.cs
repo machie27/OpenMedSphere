@@ -50,6 +50,9 @@ internal sealed class CreateDataShareCommandHandler(
             return Result<Guid>.NotFound($"Patient data with ID '{command.PatientDataId}' not found.");
         }
 
+        // Key versions are validated synchronously before DataShare.Create to prevent
+        // stale-key encryption. No async gaps between this check and the domain call,
+        // so the values cannot change between validation and use (no TOCTOU race).
         if (command.SenderKeyVersion != sender.PublicKeys.KeyVersion)
         {
             return Result<Guid>.InvalidOperation(
@@ -62,6 +65,7 @@ internal sealed class CreateDataShareCommandHandler(
                 "Recipient key version is outdated. Fetch the latest public keys before encrypting.");
         }
 
+        // Checked at both validator and handler level to cover TOCTOU on expiry.
         if (command.ExpiresAtUtc.HasValue && command.ExpiresAtUtc.Value <= DateTime.UtcNow)
         {
             return Result<Guid>.InvalidOperation("Expiry date must be in the future.");

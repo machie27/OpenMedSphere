@@ -2,18 +2,12 @@ using Microsoft.EntityFrameworkCore;
 using OpenMedSphere.Application.Abstractions.Data;
 using OpenMedSphere.Application.DataShares.Queries;
 using OpenMedSphere.Domain.Entities;
-using OpenMedSphere.Domain.Enums;
 
 namespace OpenMedSphere.Infrastructure.Persistence.Repositories;
 
 /// <summary>
 /// Repository implementation for data shares.
 /// </summary>
-/// <remarks>
-/// TODO: Extract the EffectiveStatus projection into a shared <c>Expression&lt;Func&lt;DataShare, DataShareStatus&gt;&gt;</c>
-/// so the logic lives in one place (currently duplicated in GetIncomingSharesAsync, GetOutgoingSharesAsync,
-/// and <see cref="DataShare.EffectiveStatus"/>).
-/// </remarks>
 internal sealed class DataShareRepository(ApplicationDbContext dbContext)
     : Repository<DataShare, Guid>(dbContext), IDataShareRepository
 {
@@ -28,22 +22,7 @@ internal sealed class DataShareRepository(ApplicationDbContext dbContext)
             .OrderByDescending(d => d.SharedAtUtc)
             .Skip(skip)
             .Take(take)
-            .Select(d => new DataShareSummaryResponse
-            {
-                Id = d.Id,
-                SenderResearcherId = d.SenderResearcherId,
-                RecipientResearcherId = d.RecipientResearcherId,
-                PatientDataId = d.PatientDataId,
-                // EffectiveStatus logic duplicated from DataShare.EffectiveStatus for server-side evaluation.
-                // Uses == instead of 'is' because EF Core expression trees don't support pattern matching.
-                // Only Pending shares transition to Expired; Accepted/Revoked shares keep their status.
-                Status = (d.ExpiresAtUtc.HasValue && d.ExpiresAtUtc.Value <= DateTime.UtcNow && d.Status == DataShareStatus.Pending)
-                    ? DataShareStatus.Expired
-                    : d.Status,
-                SharedAtUtc = d.SharedAtUtc,
-                AccessedAtUtc = d.AccessedAtUtc,
-                ExpiresAtUtc = d.ExpiresAtUtc
-            })
+            .Select(DataShareProjections.ToSummary)
             .ToListAsync(cancellationToken);
 
     /// <inheritdoc />
@@ -57,21 +36,6 @@ internal sealed class DataShareRepository(ApplicationDbContext dbContext)
             .OrderByDescending(d => d.SharedAtUtc)
             .Skip(skip)
             .Take(take)
-            .Select(d => new DataShareSummaryResponse
-            {
-                Id = d.Id,
-                SenderResearcherId = d.SenderResearcherId,
-                RecipientResearcherId = d.RecipientResearcherId,
-                PatientDataId = d.PatientDataId,
-                // EffectiveStatus logic duplicated from DataShare.EffectiveStatus for server-side evaluation.
-                // Uses == instead of 'is' because EF Core expression trees don't support pattern matching.
-                // Only Pending shares transition to Expired; Accepted/Revoked shares keep their status.
-                Status = (d.ExpiresAtUtc.HasValue && d.ExpiresAtUtc.Value <= DateTime.UtcNow && d.Status == DataShareStatus.Pending)
-                    ? DataShareStatus.Expired
-                    : d.Status,
-                SharedAtUtc = d.SharedAtUtc,
-                AccessedAtUtc = d.AccessedAtUtc,
-                ExpiresAtUtc = d.ExpiresAtUtc
-            })
+            .Select(DataShareProjections.ToSummary)
             .ToListAsync(cancellationToken);
 }
