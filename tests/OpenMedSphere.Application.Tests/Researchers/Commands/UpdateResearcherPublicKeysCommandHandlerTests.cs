@@ -112,7 +112,7 @@ namespace OpenMedSphere.Application.Tests.Researchers.Commands
 
             Assert.True(result.IsFailure);
             Assert.Equal(ErrorCode.InvalidOperation, result.ErrorCode);
-            Assert.Contains("3", result.Error!);
+            Assert.Contains("must be greater than the current version", result.Error!);
         }
 
         [Fact]

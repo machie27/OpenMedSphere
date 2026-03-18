@@ -18,6 +18,7 @@ internal static class ResultExtensions
             ErrorCode.NotFound => Results.NotFound(result.Error),
             ErrorCode.Conflict => Results.Conflict(result.Error),
             ErrorCode.InvalidOperation => Results.UnprocessableEntity(result.Error),
-            _ => Results.BadRequest(result.Error)
+            ErrorCode.ValidationFailed => Results.BadRequest(result.Error),
+            _ => throw new InvalidOperationException($"Unmapped error code: {result.ErrorCode}")
         };
 }

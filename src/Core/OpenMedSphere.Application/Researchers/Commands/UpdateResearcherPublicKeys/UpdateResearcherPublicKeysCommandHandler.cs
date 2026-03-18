@@ -34,7 +34,7 @@ internal sealed class UpdateResearcherPublicKeysCommandHandler(
         if (command.KeyVersion <= researcher.PublicKeys.KeyVersion)
         {
             return Result.InvalidOperation(
-                $"New key version ({command.KeyVersion}) must be greater than current version ({researcher.PublicKeys.KeyVersion}).");
+                "New key version must be greater than the current version.");
         }
 
         var newPublicKeys = PublicKeySet.Create(

@@ -109,7 +109,7 @@ public sealed class Researcher : AggregateRoot<Guid>
         if (newPublicKeys.KeyVersion <= PublicKeys.KeyVersion)
         {
             throw new ArgumentException(
-                $"New key version ({newPublicKeys.KeyVersion}) must be greater than current version ({PublicKeys.KeyVersion}).",
+                "New key version must be greater than the current version.",
                 nameof(newPublicKeys));
         }
 

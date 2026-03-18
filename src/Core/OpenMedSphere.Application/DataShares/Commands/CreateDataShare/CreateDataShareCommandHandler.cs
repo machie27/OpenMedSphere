@@ -46,9 +46,12 @@ internal sealed class CreateDataShareCommandHandler(
         }
 
         // Key versions are validated before DataShare.Create to prevent stale-key encryption.
-        // Note: a concurrent key rotation between the reads above and this check is possible
-        // (small TOCTOU window), but the xmin concurrency token will cause SaveChanges to fail
-        // if the researcher was modified in the interim.
+        // Note: a small TOCTOU window exists between the key version checks above and the
+        // insert below. A concurrent key rotation could complete in this window, leaving the
+        // stored SenderKeyVersion/RecipientKeyVersion stale. This is accepted as a low-probability
+        // edge case — the xmin token does NOT protect here because we are inserting DataShare,
+        // not updating Researcher. A client retrying with fresh key data will create a new share
+        // if needed.
         if (command.SenderKeyVersion != sender.PublicKeys.KeyVersion)
         {
             return Result<Guid>.InvalidOperation(

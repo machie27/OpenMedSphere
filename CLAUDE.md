@@ -262,10 +262,12 @@ public sealed class MyEntity : AggregateRoot<Guid>
 - Handler preconditions must be a superset of domain method guards — if the domain throws, it escapes as an unhandled 500
 - Use `Guid.CreateVersion7()` for all new entity IDs (better index performance, time-sortable)
 - **Concurrent unique constraint handling**: Use `IUniqueConstraintViolationDetector` (Application abstraction) to detect database unique constraint violations without coupling to EF Core/Npgsql types — do NOT string-match on exception type names or inner exception messages
-- **Optimistic concurrency handling**: Use `IConcurrencyConflictDetector` (Application abstraction) to detect `DbUpdateConcurrencyException` without coupling to EF Core types. Handlers that mutate contested entities (Accept/Revoke DataShare, key rotation) should catch concurrency conflicts and return `Result.Conflict()`. PostgreSQL `xmin` row version tokens are configured on `DataShare` and `Researcher` entities via EF Core `IsRowVersion()`
+- **Optimistic concurrency handling**: Use `IConcurrencyConflictDetector` (Application abstraction) to detect `DbUpdateConcurrencyException` without coupling to EF Core types. Handlers that mutate contested entities (Accept/Revoke DataShare, key rotation) should catch concurrency conflicts and return `Result.Conflict()`. PostgreSQL `xmin` row version tokens are configured on `DataShare` and `Researcher` entities via EF Core `IsRowVersion()`. Note: `xmin` only protects entities being **updated or deleted** in `SaveChangesAsync` — it does NOT protect read-only entities in the same unit of work (e.g., Researcher reads during DataShare insert)
+- **Error message hygiene**: Do not interpolate internal server state (entity versions, internal IDs, counts) into error messages returned to callers — the caller already knows what they submitted, and leaking server-side values is poor practice
 
 ### API Endpoint Patterns
 - Use `if`/`else` with a `MapError()` switch expression — avoid nested ternary operators for Result-to-IResult mapping
+- `MapError()` uses an exhaustive switch: every `ErrorCode` variant has an explicit arm, and the `_` default throws `InvalidOperationException` to surface unmapped codes at development time
 - Map `ErrorCode.NotFound` → 404, `ErrorCode.Conflict` → 409, `ErrorCode.InvalidOperation` → 422, `ErrorCode.ValidationFailed` → 400
 - Separate `TryGetResearcherId` failures (401 Unauthorized) from ID mismatch (403 Forbid) — do not conflate
 - All list/search endpoints must be paginated (default 20, max 100) — never return unbounded result sets
