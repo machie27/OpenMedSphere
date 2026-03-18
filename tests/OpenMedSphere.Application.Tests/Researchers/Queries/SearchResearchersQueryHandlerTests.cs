@@ -3,8 +3,6 @@ using OpenMedSphere.Application.Abstractions.Data;
 using OpenMedSphere.Application.Messaging;
 using OpenMedSphere.Application.Researchers.Queries;
 using OpenMedSphere.Application.Researchers.Queries.SearchResearchers;
-using OpenMedSphere.Domain.Entities;
-using OpenMedSphere.Domain.ValueObjects;
 using Xunit;
 
 namespace OpenMedSphere.Application.Tests.Researchers.Queries
@@ -20,22 +18,26 @@ namespace OpenMedSphere.Application.Tests.Researchers.Queries
             _handler = new SearchResearchersQueryHandler(_repositoryMock.Object);
         }
 
-        private static Researcher CreateResearcher(string name, string institution) =>
-            Researcher.Create(name, $"{name.Replace(" ", "").Replace(".", "").ToLower()}@test.com", institution,
-                PublicKeySet.Create("k1", "k2", "k3", "k4", 1));
+        private static ResearcherSummaryResponse CreateSummary(string name, string institution) =>
+            new()
+            {
+                Id = Guid.NewGuid(),
+                Name = name,
+                Institution = institution
+            };
 
         [Fact]
-        public async Task HandleAsync_WithResults_ReturnsMappedSummaries()
+        public async Task HandleAsync_WithResults_ReturnsSummaries()
         {
-            var researchers = new List<Researcher>
+            var summaries = new List<ResearcherSummaryResponse>
             {
-                CreateResearcher("Dr. Smith", "MIT"),
-                CreateResearcher("Dr. Jones", "Harvard")
+                CreateSummary("Dr. Smith", "MIT"),
+                CreateSummary("Dr. Jones", "Harvard")
             };
 
             _repositoryMock
                 .Setup(r => r.SearchAsync("smith", 0, 20, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(researchers);
+                .ReturnsAsync(summaries);
 
             SearchResearchersQuery query = new() { Query = "smith" };
 
@@ -49,31 +51,11 @@ namespace OpenMedSphere.Application.Tests.Researchers.Queries
         }
 
         [Fact]
-        public async Task HandleAsync_MapsOnlyIdNameInstitution()
-        {
-            var researcher = CreateResearcher("Dr. Smith", "MIT");
-            _repositoryMock
-                .Setup(r => r.SearchAsync("smith", 0, 20, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new List<Researcher> { researcher });
-
-            SearchResearchersQuery query = new() { Query = "smith" };
-
-            Result<IReadOnlyList<ResearcherSummaryResponse>> result =
-                await _handler.HandleAsync(query, CancellationToken.None);
-
-            Assert.True(result.IsSuccess);
-            var summary = result.Value[0];
-            Assert.Equal(researcher.Id, summary.Id);
-            Assert.Equal(researcher.Name, summary.Name);
-            Assert.Equal(researcher.Institution, summary.Institution);
-        }
-
-        [Fact]
         public async Task HandleAsync_WithNoResults_ReturnsEmptyList()
         {
             _repositoryMock
                 .Setup(r => r.SearchAsync("nonexistent", 0, 20, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new List<Researcher>());
+                .ReturnsAsync(new List<ResearcherSummaryResponse>());
 
             SearchResearchersQuery query = new() { Query = "nonexistent" };
 
@@ -89,7 +71,7 @@ namespace OpenMedSphere.Application.Tests.Researchers.Queries
         {
             _repositoryMock
                 .Setup(r => r.SearchAsync("test", 20, 20, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new List<Researcher>());
+                .ReturnsAsync(new List<ResearcherSummaryResponse>());
 
             SearchResearchersQuery query = new()
             {
@@ -110,7 +92,7 @@ namespace OpenMedSphere.Application.Tests.Researchers.Queries
         {
             _repositoryMock
                 .Setup(r => r.SearchAsync("test", 0, 10, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new List<Researcher>());
+                .ReturnsAsync(new List<ResearcherSummaryResponse>());
 
             SearchResearchersQuery query = new()
             {

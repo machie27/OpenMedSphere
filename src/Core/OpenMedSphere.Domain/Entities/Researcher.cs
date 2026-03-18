@@ -11,6 +11,12 @@ namespace OpenMedSphere.Domain.Entities;
 public sealed class Researcher : AggregateRoot<Guid>
 {
     /// <summary>
+    /// Gets the external identity identifier from the authentication provider (e.g., JWT subject claim).
+    /// Used to enforce one-researcher-per-identity and prevent spam registrations.
+    /// </summary>
+    public string ExternalId { get; private set; } = null!;
+
+    /// <summary>
     /// Gets the researcher's name.
     /// </summary>
     public string Name { get; private set; } = null!;
@@ -64,13 +70,15 @@ public sealed class Researcher : AggregateRoot<Guid>
     /// <summary>
     /// Creates a new researcher.
     /// </summary>
+    /// <param name="externalId">The external identity identifier (e.g., JWT subject claim).</param>
     /// <param name="name">The researcher's name.</param>
     /// <param name="email">The researcher's email address.</param>
     /// <param name="institution">The researcher's institution.</param>
     /// <param name="publicKeys">The researcher's public key set.</param>
     /// <returns>A new researcher.</returns>
-    public static Researcher Create(string name, string email, string institution, PublicKeySet publicKeys)
+    public static Researcher Create(string externalId, string name, string email, string institution, PublicKeySet publicKeys)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(externalId);
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ArgumentException.ThrowIfNullOrWhiteSpace(email);
         ArgumentException.ThrowIfNullOrWhiteSpace(institution);
@@ -78,6 +86,7 @@ public sealed class Researcher : AggregateRoot<Guid>
 
         var researcher = new Researcher(Guid.CreateVersion7())
         {
+            ExternalId = externalId,
             Name = name,
             Email = email,
             Institution = institution,

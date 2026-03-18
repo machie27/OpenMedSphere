@@ -34,7 +34,7 @@ namespace OpenMedSphere.Application.Tests.Researchers.Commands
         private static Researcher CreateResearcherWithKeyVersion(int keyVersion)
         {
             var keys = PublicKeySet.Create("k1", "k2", "k3", "k4", keyVersion);
-            return Researcher.Create("Dr. Smith", "smith@test.com", "MIT", keys);
+            return Researcher.Create("ext-1", "Dr. Smith", "smith@test.com", "MIT", keys);
         }
 
         [Fact]

@@ -12,6 +12,15 @@ internal sealed class RegisterResearcherCommandValidator : IValidator<RegisterRe
     {
         List<ValidationError> errors = [];
 
+        if (string.IsNullOrWhiteSpace(instance.ExternalId))
+        {
+            errors.Add(new ValidationError(nameof(instance.ExternalId), "External identity is required."));
+        }
+        else if (instance.ExternalId.Length > ValidationConstants.MaxNameLength)
+        {
+            errors.Add(new ValidationError(nameof(instance.ExternalId), $"External identity must not exceed {ValidationConstants.MaxNameLength} characters."));
+        }
+
         if (string.IsNullOrWhiteSpace(instance.Name))
         {
             errors.Add(new ValidationError(nameof(instance.Name), "Name is required."));

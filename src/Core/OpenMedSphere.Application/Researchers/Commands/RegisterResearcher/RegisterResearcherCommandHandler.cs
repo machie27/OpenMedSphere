@@ -19,6 +19,13 @@ internal sealed class RegisterResearcherCommandHandler(
         RegisterResearcherCommand command,
         CancellationToken cancellationToken = default)
     {
+        var existingByExternalId = await repository.GetByExternalIdAsync(command.ExternalId, cancellationToken);
+
+        if (existingByExternalId is not null)
+        {
+            return Result<Guid>.Conflict("A researcher profile already exists for this identity.");
+        }
+
         var existing = await repository.GetByEmailAsync(command.Email, cancellationToken);
 
         if (existing is not null)
@@ -33,7 +40,7 @@ internal sealed class RegisterResearcherCommandHandler(
             command.EcdsaPublicKey,
             keyVersion: 1);
 
-        var researcher = Researcher.Create(command.Name, command.Email, command.Institution, publicKeys);
+        var researcher = Researcher.Create(command.ExternalId, command.Name, command.Email, command.Institution, publicKeys);
 
         await repository.AddAsync(researcher, cancellationToken);
 
@@ -41,10 +48,12 @@ internal sealed class RegisterResearcherCommandHandler(
         {
             await unitOfWork.SaveChangesAsync(cancellationToken);
         }
+        catch (Exception ex) when (uniqueConstraintDetector.IsUniqueConstraintViolation(ex, ResearcherIndexNames.ExternalIdUnique))
+        {
+            return Result<Guid>.Conflict("A researcher profile already exists for this identity.");
+        }
         catch (Exception ex) when (uniqueConstraintDetector.IsUniqueConstraintViolation(ex, ResearcherIndexNames.EmailUnique))
         {
-            // Unique index violation from concurrent insert — the optimistic check above
-            // handles the common case; this catches the rare race condition.
             return Result<Guid>.Conflict($"A researcher with email '{command.Email}' already exists.");
         }
 

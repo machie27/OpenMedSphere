@@ -43,7 +43,7 @@ OpenMedSphere.Domain/
 │   ├── PatientData.cs          # Patient data aggregate root
 │   ├── ResearchStudy.cs        # Research study aggregate root
 │   ├── AnonymizationPolicy.cs  # Anonymization policy aggregate root
-│   ├── Researcher.cs           # Researcher aggregate root (identity + crypto keys)
+│   ├── Researcher.cs           # Researcher aggregate root (identity + crypto keys + ExternalId)
 │   ├── DataShare.cs            # E2E encrypted data share aggregate root
 │   └── AuditLogEntry.cs        # Audit log entry entity
 ├── Events/
@@ -149,7 +149,7 @@ dotnet run --project src/Presentation/OpenMedSphere.API/OpenMedSphere.API.csproj
 
 ### Testing
 ```bash
-# Run all tests (266 tests: 158 domain + 108 application)
+# Run all tests (269 tests: 159 domain + 110 application)
 dotnet test OpenMedSphere.slnx
 
 # Run domain tests only
@@ -337,6 +337,7 @@ AppHost uses User Secrets for local development:
 ### Authentication
 - **JWT Bearer** authentication on all API endpoints
 - Researcher identity extracted from JWT `NameIdentifier` claim (not from request parameters)
+- Registration binds the JWT `NameIdentifier` to `Researcher.ExternalId` (unique constraint prevents duplicate registrations per identity)
 - Configuration via `Jwt:Key`, `Jwt:Issuer`, `Jwt:Audience` settings (with dev defaults)
 - Development token endpoint: `POST /api/auth/dev-token?researcherId={guid}` (only available in Development environment)
 
@@ -407,25 +408,28 @@ GitHub Actions workflow (`.github/workflows/pr-validation.yml`):
   - Development token endpoint
   - Minimal API endpoints for all entities, medical terminology, researchers, and data shares
 - **E2E Encrypted Data Sharing (server-side complete):**
-  - `Researcher` entity with hybrid PQC public keys (ML-KEM-768, ML-DSA-65, X25519, ECDSA P-256)
+  - `Researcher` entity with hybrid PQC public keys (ML-KEM-768, ML-DSA-65, X25519, ECDSA P-256) and `ExternalId` for identity binding
   - `DataShare` entity for opaque encrypted blob storage (zero-knowledge server)
   - Key rotation with monotonic version enforcement and `ResearcherKeyRotatedEvent`
   - CQRS commands: RegisterResearcher, UpdatePublicKeys, CreateDataShare, AcceptDataShare, RevokeDataShare
   - Full lifecycle: create → accept → revoke with domain events
   - Expiry: computed at query time via `EffectiveStatus` (only Pending → Expired; Accepted shares stay Accepted past expiry — clients inspect `ExpiresAtUtc` directly)
   - Revocation: Accepted shares can be revoked even past expiry (medical data compliance — right to withdraw). Only expired *Pending* shares block revocation.
+  - One-researcher-per-identity enforcement via `ExternalId` unique constraint (JWT `NameIdentifier` → `Researcher.ExternalId`)
   - Authorization via JWT claims (researcher ID extracted from `NameIdentifier` claim, not request parameters)
+  - GET /api/researchers/{id} returns email only to the researcher themselves (GDPR compliance)
+  - Search endpoint uses server-side projection to avoid loading public key columns
   - Active status checks on sender/recipient during share creation and key rotation
   - Base64 format validation on all cryptographic fields (public keys, encrypted payload, encapsulated key, signature)
   - Paginated incoming/outgoing share list and researcher search endpoints (default 20, max 100)
   - Handler-level precondition checks for state transitions (no exception-driven control flow)
   - Anti-enumeration: Accept/Revoke/CreateDataShare handlers return NotFound for unauthorized callers and inactive recipients (prevents share ID and researcher enumeration)
   - Optimistic concurrency on Accept/Revoke/UpdatePublicKeys handlers via `IConcurrencyConflictDetector`
-- **Testing (266 tests: 158 domain + 108 application):**
+- **Testing (269 tests: 159 domain + 110 application):**
   - Domain entity tests (PatientData, ResearchStudy, AnonymizationPolicy, Researcher, DataShare)
   - Value object tests (PatientIdentifier, DateRange, StudyCode, MedicalCode, PublicKeySet)
   - Command handler tests with Moq (CreatePatientData, AnonymizePatientData, CreateResearchStudy, CreateAnonymizationPolicy, RegisterResearcher, CreateDataShare, AcceptDataShare, RevokeDataShare, UpdateResearcherPublicKeys)
-  - Query handler tests (GetDataShareById, GetIncomingShares, GetOutgoingShares, SearchResearchers — authorization, non-participant rejection, effective status, pagination)
+  - Query handler tests (GetDataShareById, GetIncomingShares, GetOutgoingShares, SearchResearchers — authorization, non-participant rejection, effective status, pagination, email visibility)
   - Validator tests (CreatePatientDataCommandValidator, CreateDataShareCommandValidator, RegisterResearcherCommandValidator, UpdateResearcherPublicKeysCommandValidator)
 
 **Planned (Not Yet Implemented):**
@@ -449,5 +453,8 @@ GitHub Actions workflow (`.github/workflows/pr-validation.yml`):
 - Anti-enumeration on all data share endpoints — unauthorized callers always receive NotFound (never a distinct error that leaks existence or active status)
 - Optimistic concurrency protection on DataShare and Researcher entities via PostgreSQL `xmin` row version tokens
 - Hybrid quantum-safe cryptography: ML-KEM-768 + X25519 (key agreement), ML-DSA-65 + ECDSA (signatures), AES-256-GCM (symmetric)
+- One-researcher-per-identity: `ExternalId` unique constraint on `Researcher` binds each JWT identity to a single profile, preventing spam registrations
+- Email privacy: GET /api/researchers/{id} returns email only when the caller is viewing their own profile; other callers receive `null`
+- Server-side projection on researcher search to avoid loading ~40KB/row of public key data
 - Future: Implement HIPAA and GDPR compliance requirements
 - Future: Client-side crypto via Rust WASM for data at rest and in transit

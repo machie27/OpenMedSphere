@@ -15,7 +15,7 @@ namespace OpenMedSphere.Domain.Tests.Entities
         {
             var keys = CreateTestKeys();
 
-            var result = Researcher.Create("Dr. Smith", "smith@university.edu", "MIT", keys);
+            var result = Researcher.Create("ext-1", "Dr. Smith", "smith@university.edu", "MIT", keys);
 
             Assert.NotNull(result);
             Assert.Equal("Dr. Smith", result.Name);
@@ -29,44 +29,51 @@ namespace OpenMedSphere.Domain.Tests.Entities
         }
 
         [Fact]
+        public void Create_WithNullExternalId_ThrowsArgumentException()
+        {
+            Assert.Throws<ArgumentNullException>(() =>
+                Researcher.Create(null!, "Dr. Smith", "email@test.com", "MIT", CreateTestKeys()));
+        }
+
+        [Fact]
         public void Create_WithNullName_ThrowsArgumentException()
         {
             Assert.Throws<ArgumentNullException>(() =>
-                Researcher.Create(null!, "email@test.com", "MIT", CreateTestKeys()));
+                Researcher.Create("ext-1", null!, "email@test.com", "MIT", CreateTestKeys()));
         }
 
         [Fact]
         public void Create_WithWhitespaceName_ThrowsArgumentException()
         {
             Assert.Throws<ArgumentException>(() =>
-                Researcher.Create("  ", "email@test.com", "MIT", CreateTestKeys()));
+                Researcher.Create("ext-1", "  ", "email@test.com", "MIT", CreateTestKeys()));
         }
 
         [Fact]
         public void Create_WithNullEmail_ThrowsArgumentException()
         {
             Assert.Throws<ArgumentNullException>(() =>
-                Researcher.Create("Dr. Smith", null!, "MIT", CreateTestKeys()));
+                Researcher.Create("ext-1", "Dr. Smith", null!, "MIT", CreateTestKeys()));
         }
 
         [Fact]
         public void Create_WithNullInstitution_ThrowsArgumentException()
         {
             Assert.Throws<ArgumentNullException>(() =>
-                Researcher.Create("Dr. Smith", "email@test.com", null!, CreateTestKeys()));
+                Researcher.Create("ext-1", "Dr. Smith", "email@test.com", null!, CreateTestKeys()));
         }
 
         [Fact]
         public void Create_WithNullPublicKeys_ThrowsArgumentNullException()
         {
             Assert.Throws<ArgumentNullException>(() =>
-                Researcher.Create("Dr. Smith", "email@test.com", "MIT", null!));
+                Researcher.Create("ext-1", "Dr. Smith", "email@test.com", "MIT", null!));
         }
 
         [Fact]
         public void RotateKeys_WithHigherVersion_UpdatesKeys()
         {
-            var researcher = Researcher.Create("Dr. Smith", "email@test.com", "MIT", CreateTestKeys(1));
+            var researcher = Researcher.Create("ext-1", "Dr. Smith", "email@test.com", "MIT", CreateTestKeys(1));
             var newKeys = CreateTestKeys(2);
 
             researcher.RotateKeys(newKeys);
@@ -79,7 +86,7 @@ namespace OpenMedSphere.Domain.Tests.Entities
         [Fact]
         public void RotateKeys_WithHigherVersion_RaisesKeyRotatedEvent()
         {
-            var researcher = Researcher.Create("Dr. Smith", "email@test.com", "MIT", CreateTestKeys(1));
+            var researcher = Researcher.Create("ext-1", "Dr. Smith", "email@test.com", "MIT", CreateTestKeys(1));
             researcher.ClearDomainEvents();
 
             researcher.RotateKeys(CreateTestKeys(2));
@@ -94,7 +101,7 @@ namespace OpenMedSphere.Domain.Tests.Entities
         [Fact]
         public void RotateKeys_WithSameVersion_ThrowsArgumentException()
         {
-            var researcher = Researcher.Create("Dr. Smith", "email@test.com", "MIT", CreateTestKeys(1));
+            var researcher = Researcher.Create("ext-1", "Dr. Smith", "email@test.com", "MIT", CreateTestKeys(1));
 
             Assert.Throws<ArgumentException>(() =>
                 researcher.RotateKeys(CreateTestKeys(1)));
@@ -103,7 +110,7 @@ namespace OpenMedSphere.Domain.Tests.Entities
         [Fact]
         public void RotateKeys_WithLowerVersion_ThrowsArgumentException()
         {
-            var researcher = Researcher.Create("Dr. Smith", "email@test.com", "MIT", CreateTestKeys(2));
+            var researcher = Researcher.Create("ext-1", "Dr. Smith", "email@test.com", "MIT", CreateTestKeys(2));
 
             Assert.Throws<ArgumentException>(() =>
                 researcher.RotateKeys(CreateTestKeys(1)));
@@ -112,7 +119,7 @@ namespace OpenMedSphere.Domain.Tests.Entities
         [Fact]
         public void RotateKeys_WithNull_ThrowsArgumentNullException()
         {
-            var researcher = Researcher.Create("Dr. Smith", "email@test.com", "MIT", CreateTestKeys());
+            var researcher = Researcher.Create("ext-1", "Dr. Smith", "email@test.com", "MIT", CreateTestKeys());
 
             Assert.Throws<ArgumentNullException>(() =>
                 researcher.RotateKeys(null!));
@@ -121,7 +128,7 @@ namespace OpenMedSphere.Domain.Tests.Entities
         [Fact]
         public void UpdateProfile_WithValidValues_UpdatesProperties()
         {
-            var researcher = Researcher.Create("Dr. Smith", "email@test.com", "MIT", CreateTestKeys());
+            var researcher = Researcher.Create("ext-1", "Dr. Smith", "email@test.com", "MIT", CreateTestKeys());
 
             researcher.UpdateProfile("Dr. Jones", "jones@harvard.edu", "Harvard");
 
@@ -134,7 +141,7 @@ namespace OpenMedSphere.Domain.Tests.Entities
         [Fact]
         public void UpdateProfile_WithValidValues_RaisesProfileUpdatedEvent()
         {
-            var researcher = Researcher.Create("Dr. Smith", "email@test.com", "MIT", CreateTestKeys());
+            var researcher = Researcher.Create("ext-1", "Dr. Smith", "email@test.com", "MIT", CreateTestKeys());
             researcher.ClearDomainEvents();
 
             researcher.UpdateProfile("Dr. Jones", "jones@harvard.edu", "Harvard");
@@ -147,7 +154,7 @@ namespace OpenMedSphere.Domain.Tests.Entities
         [Fact]
         public void UpdateProfile_WithNullName_ThrowsArgumentException()
         {
-            var researcher = Researcher.Create("Dr. Smith", "email@test.com", "MIT", CreateTestKeys());
+            var researcher = Researcher.Create("ext-1", "Dr. Smith", "email@test.com", "MIT", CreateTestKeys());
 
             Assert.Throws<ArgumentNullException>(() =>
                 researcher.UpdateProfile(null!, "email@test.com", "MIT"));
@@ -156,7 +163,7 @@ namespace OpenMedSphere.Domain.Tests.Entities
         [Fact]
         public void Deactivate_SetsIsActiveToFalse()
         {
-            var researcher = Researcher.Create("Dr. Smith", "email@test.com", "MIT", CreateTestKeys());
+            var researcher = Researcher.Create("ext-1", "Dr. Smith", "email@test.com", "MIT", CreateTestKeys());
 
             researcher.Deactivate();
 
@@ -167,7 +174,7 @@ namespace OpenMedSphere.Domain.Tests.Entities
         [Fact]
         public void Activate_SetsIsActiveToTrue()
         {
-            var researcher = Researcher.Create("Dr. Smith", "email@test.com", "MIT", CreateTestKeys());
+            var researcher = Researcher.Create("ext-1", "Dr. Smith", "email@test.com", "MIT", CreateTestKeys());
             researcher.Deactivate();
 
             researcher.Activate();
@@ -178,7 +185,7 @@ namespace OpenMedSphere.Domain.Tests.Entities
         [Fact]
         public void Create_WithValidArguments_RaisesResearcherCreatedEvent()
         {
-            var researcher = Researcher.Create("Dr. Smith", "email@test.com", "MIT", CreateTestKeys());
+            var researcher = Researcher.Create("ext-1", "Dr. Smith", "email@test.com", "MIT", CreateTestKeys());
 
             Assert.Single(researcher.DomainEvents);
             var domainEvent = Assert.IsType<ResearcherCreatedEvent>(researcher.DomainEvents.First());
@@ -188,7 +195,7 @@ namespace OpenMedSphere.Domain.Tests.Entities
         [Fact]
         public void RotateKeys_WhenInactive_ThrowsInvalidOperationException()
         {
-            var researcher = Researcher.Create("Dr. Smith", "email@test.com", "MIT", CreateTestKeys());
+            var researcher = Researcher.Create("ext-1", "Dr. Smith", "email@test.com", "MIT", CreateTestKeys());
             researcher.Deactivate();
 
             Assert.Throws<InvalidOperationException>(() =>
@@ -198,7 +205,7 @@ namespace OpenMedSphere.Domain.Tests.Entities
         [Fact]
         public void UpdateProfile_WhenInactive_ThrowsInvalidOperationException()
         {
-            var researcher = Researcher.Create("Dr. Smith", "email@test.com", "MIT", CreateTestKeys());
+            var researcher = Researcher.Create("ext-1", "Dr. Smith", "email@test.com", "MIT", CreateTestKeys());
             researcher.Deactivate();
 
             Assert.Throws<InvalidOperationException>(() =>
@@ -208,7 +215,7 @@ namespace OpenMedSphere.Domain.Tests.Entities
         [Fact]
         public void Deactivate_RaisesResearcherDeactivatedEvent()
         {
-            var researcher = Researcher.Create("Dr. Smith", "email@test.com", "MIT", CreateTestKeys());
+            var researcher = Researcher.Create("ext-1", "Dr. Smith", "email@test.com", "MIT", CreateTestKeys());
             researcher.ClearDomainEvents();
 
             researcher.Deactivate();
@@ -220,7 +227,7 @@ namespace OpenMedSphere.Domain.Tests.Entities
         [Fact]
         public void Activate_RaisesResearcherActivatedEvent()
         {
-            var researcher = Researcher.Create("Dr. Smith", "email@test.com", "MIT", CreateTestKeys());
+            var researcher = Researcher.Create("ext-1", "Dr. Smith", "email@test.com", "MIT", CreateTestKeys());
             researcher.Deactivate();
             researcher.ClearDomainEvents();
 
@@ -233,7 +240,7 @@ namespace OpenMedSphere.Domain.Tests.Entities
         [Fact]
         public void Deactivate_WhenAlreadyInactive_IsNoOp()
         {
-            var researcher = Researcher.Create("Dr. Smith", "email@test.com", "MIT", CreateTestKeys());
+            var researcher = Researcher.Create("ext-1", "Dr. Smith", "email@test.com", "MIT", CreateTestKeys());
             researcher.Deactivate();
             var updatedAt = researcher.UpdatedAtUtc;
             researcher.ClearDomainEvents();
@@ -247,7 +254,7 @@ namespace OpenMedSphere.Domain.Tests.Entities
         [Fact]
         public void Activate_WhenAlreadyActive_IsNoOp()
         {
-            var researcher = Researcher.Create("Dr. Smith", "email@test.com", "MIT", CreateTestKeys());
+            var researcher = Researcher.Create("ext-1", "Dr. Smith", "email@test.com", "MIT", CreateTestKeys());
             researcher.ClearDomainEvents();
 
             researcher.Activate();

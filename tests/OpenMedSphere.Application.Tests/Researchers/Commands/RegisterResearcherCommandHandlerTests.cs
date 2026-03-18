@@ -30,25 +30,30 @@ namespace OpenMedSphere.Application.Tests.Researchers.Commands
                 _uniqueConstraintDetectorMock.Object);
         }
 
+        private static RegisterResearcherCommand CreateValidCommand() => new()
+        {
+            ExternalId = "ext-1",
+            Name = "Dr. Smith",
+            Email = "smith@university.edu",
+            Institution = "MIT",
+            MlKemPublicKey = "mlKemKey",
+            MlDsaPublicKey = "mlDsaKey",
+            X25519PublicKey = "x25519Key",
+            EcdsaPublicKey = "ecdsaKey"
+        };
+
         [Fact]
         public async Task HandleAsync_ValidCommand_ReturnsSuccessWithGuid()
         {
             _repositoryMock
+                .Setup(r => r.GetByExternalIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((Researcher?)null);
+
+            _repositoryMock
                 .Setup(r => r.GetByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync((Researcher?)null);
 
-            RegisterResearcherCommand command = new()
-            {
-                Name = "Dr. Smith",
-                Email = "smith@university.edu",
-                Institution = "MIT",
-                MlKemPublicKey = "mlKemKey",
-                MlDsaPublicKey = "mlDsaKey",
-                X25519PublicKey = "x25519Key",
-                EcdsaPublicKey = "ecdsaKey"
-            };
-
-            Result<Guid> result = await _handler.HandleAsync(command, CancellationToken.None);
+            Result<Guid> result = await _handler.HandleAsync(CreateValidCommand(), CancellationToken.None);
 
             Assert.True(result.IsSuccess);
             Assert.NotEqual(Guid.Empty, result.Value);
@@ -61,28 +66,41 @@ namespace OpenMedSphere.Application.Tests.Researchers.Commands
         }
 
         [Fact]
-        public async Task HandleAsync_DuplicateEmail_ReturnsConflict()
+        public async Task HandleAsync_DuplicateExternalId_ReturnsConflict()
         {
             var existingResearcher = Researcher.Create(
-                "Existing", "smith@university.edu", "MIT",
+                "ext-1", "Existing", "existing@university.edu", "MIT",
+                Domain.ValueObjects.PublicKeySet.Create("k1", "k2", "k3", "k4", 1));
+
+            _repositoryMock
+                .Setup(r => r.GetByExternalIdAsync("ext-1", It.IsAny<CancellationToken>()))
+                .ReturnsAsync(existingResearcher);
+
+            Result<Guid> result = await _handler.HandleAsync(CreateValidCommand(), CancellationToken.None);
+
+            Assert.True(result.IsFailure);
+            Assert.Equal(ErrorCode.Conflict, result.ErrorCode);
+            _repositoryMock.Verify(
+                r => r.AddAsync(It.IsAny<Researcher>(), It.IsAny<CancellationToken>()),
+                Times.Never);
+        }
+
+        [Fact]
+        public async Task HandleAsync_DuplicateEmail_ReturnsConflict()
+        {
+            _repositoryMock
+                .Setup(r => r.GetByExternalIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((Researcher?)null);
+
+            var existingResearcher = Researcher.Create(
+                "ext-other", "Existing", "smith@university.edu", "MIT",
                 Domain.ValueObjects.PublicKeySet.Create("k1", "k2", "k3", "k4", 1));
 
             _repositoryMock
                 .Setup(r => r.GetByEmailAsync("smith@university.edu", It.IsAny<CancellationToken>()))
                 .ReturnsAsync(existingResearcher);
 
-            RegisterResearcherCommand command = new()
-            {
-                Name = "Dr. Smith",
-                Email = "smith@university.edu",
-                Institution = "MIT",
-                MlKemPublicKey = "mlKemKey",
-                MlDsaPublicKey = "mlDsaKey",
-                X25519PublicKey = "x25519Key",
-                EcdsaPublicKey = "ecdsaKey"
-            };
-
-            Result<Guid> result = await _handler.HandleAsync(command, CancellationToken.None);
+            Result<Guid> result = await _handler.HandleAsync(CreateValidCommand(), CancellationToken.None);
 
             Assert.True(result.IsFailure);
             Assert.Equal(ErrorCode.Conflict, result.ErrorCode);
@@ -93,9 +111,40 @@ namespace OpenMedSphere.Application.Tests.Researchers.Commands
         }
 
         [Fact]
+        public async Task HandleAsync_ConcurrentDuplicateExternalId_ReturnsConflict()
+        {
+            var savedException = new InvalidOperationException("unique constraint violation");
+
+            _repositoryMock
+                .Setup(r => r.GetByExternalIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((Researcher?)null);
+
+            _repositoryMock
+                .Setup(r => r.GetByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((Researcher?)null);
+
+            _unitOfWorkMock
+                .Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+                .ThrowsAsync(savedException);
+
+            _uniqueConstraintDetectorMock
+                .Setup(d => d.IsUniqueConstraintViolation(savedException, ResearcherIndexNames.ExternalIdUnique))
+                .Returns(true);
+
+            Result<Guid> result = await _handler.HandleAsync(CreateValidCommand(), CancellationToken.None);
+
+            Assert.True(result.IsFailure);
+            Assert.Equal(ErrorCode.Conflict, result.ErrorCode);
+        }
+
+        [Fact]
         public async Task HandleAsync_ConcurrentDuplicateEmail_ReturnsConflict()
         {
             var savedException = new InvalidOperationException("unique constraint violation");
+
+            _repositoryMock
+                .Setup(r => r.GetByExternalIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((Researcher?)null);
 
             _repositoryMock
                 .Setup(r => r.GetByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -109,18 +158,7 @@ namespace OpenMedSphere.Application.Tests.Researchers.Commands
                 .Setup(d => d.IsUniqueConstraintViolation(savedException, ResearcherIndexNames.EmailUnique))
                 .Returns(true);
 
-            RegisterResearcherCommand command = new()
-            {
-                Name = "Dr. Smith",
-                Email = "smith@university.edu",
-                Institution = "MIT",
-                MlKemPublicKey = "mlKemKey",
-                MlDsaPublicKey = "mlDsaKey",
-                X25519PublicKey = "x25519Key",
-                EcdsaPublicKey = "ecdsaKey"
-            };
-
-            Result<Guid> result = await _handler.HandleAsync(command, CancellationToken.None);
+            Result<Guid> result = await _handler.HandleAsync(CreateValidCommand(), CancellationToken.None);
 
             Assert.True(result.IsFailure);
             Assert.Equal(ErrorCode.Conflict, result.ErrorCode);

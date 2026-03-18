@@ -21,7 +21,7 @@ namespace OpenMedSphere.Application.Tests.Researchers.Queries
         }
 
         private static Researcher CreateResearcher() =>
-            Researcher.Create("Dr. Smith", "smith@test.com", "MIT",
+            Researcher.Create("ext-1", "Dr. Smith", "smith@test.com", "MIT",
                 PublicKeySet.Create("k1", "k2", "k3", "k4", 1));
 
         [Fact]
@@ -33,7 +33,7 @@ namespace OpenMedSphere.Application.Tests.Researchers.Queries
                 .Setup(r => r.GetByIdAsync(researcher.Id, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(researcher);
 
-            GetResearcherByIdQuery query = new() { Id = researcher.Id };
+            GetResearcherByIdQuery query = new() { Id = researcher.Id, CallerId = researcher.Id };
 
             Result<ResearcherResponse> result = await _handler.HandleAsync(query, CancellationToken.None);
 
@@ -48,6 +48,27 @@ namespace OpenMedSphere.Application.Tests.Researchers.Queries
         }
 
         [Fact]
+        public async Task HandleAsync_DifferentCaller_ExcludesEmail()
+        {
+            var researcher = CreateResearcher();
+            var otherCallerId = Guid.NewGuid();
+
+            _repositoryMock
+                .Setup(r => r.GetByIdAsync(researcher.Id, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(researcher);
+
+            GetResearcherByIdQuery query = new() { Id = researcher.Id, CallerId = otherCallerId };
+
+            Result<ResearcherResponse> result = await _handler.HandleAsync(query, CancellationToken.None);
+
+            Assert.True(result.IsSuccess);
+            Assert.Equal(researcher.Id, result.Value.Id);
+            Assert.Equal("Dr. Smith", result.Value.Name);
+            Assert.Null(result.Value.Email);
+            Assert.Equal("MIT", result.Value.Institution);
+        }
+
+        [Fact]
         public async Task HandleAsync_NonExistentResearcher_ReturnsNotFound()
         {
             var id = Guid.NewGuid();
@@ -56,7 +77,7 @@ namespace OpenMedSphere.Application.Tests.Researchers.Queries
                 .Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>()))
                 .ReturnsAsync((Researcher?)null);
 
-            GetResearcherByIdQuery query = new() { Id = id };
+            GetResearcherByIdQuery query = new() { Id = id, CallerId = Guid.NewGuid() };
 
             Result<ResearcherResponse> result = await _handler.HandleAsync(query, CancellationToken.None);
 

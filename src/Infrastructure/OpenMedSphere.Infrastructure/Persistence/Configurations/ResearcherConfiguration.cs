@@ -16,6 +16,10 @@ internal sealed class ResearcherConfiguration : IEntityTypeConfiguration<Researc
 
         builder.HasKey(r => r.Id);
 
+        builder.Property(r => r.ExternalId)
+            .HasMaxLength(200)
+            .IsRequired();
+
         builder.Property(r => r.Name)
             .HasMaxLength(200)
             .IsRequired();
@@ -66,6 +70,10 @@ internal sealed class ResearcherConfiguration : IEntityTypeConfiguration<Researc
         });
 
         builder.Navigation(r => r.PublicKeys).IsRequired();
+
+        builder.HasIndex(r => r.ExternalId)
+            .IsUnique()
+            .HasDatabaseName(ResearcherIndexNames.ExternalIdUnique);
 
         builder.HasIndex(r => r.Email)
             .IsUnique()

@@ -63,16 +63,20 @@ public static class ResearcherEndpoints
         return app;
     }
 
-    // Registration is a special case: no researcher ID exists in JWT yet.
-    // Authorization is provided by JWT authentication (RequireAuthorization on the group)
-    // and email uniqueness (DB unique index prevents duplicate registrations).
-    // Future: require an invitation token or admin approval before registration.
     private static async Task<IResult> RegisterAsync(
         RegisterResearcherCommand command,
+        ClaimsPrincipal user,
         IMediator mediator,
         CancellationToken cancellationToken)
     {
-        Result<Guid> result = await mediator.SendAsync<Guid>(command, cancellationToken);
+        if (!user.TryGetResearcherId(out Guid callerId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var commandWithIdentity = command with { ExternalId = callerId.ToString() };
+
+        Result<Guid> result = await mediator.SendAsync<Guid>(commandWithIdentity, cancellationToken);
 
         if (result.IsSuccess)
         {
@@ -84,11 +88,17 @@ public static class ResearcherEndpoints
 
     private static async Task<IResult> GetByIdAsync(
         Guid id,
+        ClaimsPrincipal user,
         IMediator mediator,
         CancellationToken cancellationToken)
     {
+        if (!user.TryGetResearcherId(out Guid callerId))
+        {
+            return Results.Unauthorized();
+        }
+
         Result<ResearcherResponse> result = await mediator.QueryAsync<ResearcherResponse>(
-            new GetResearcherByIdQuery { Id = id },
+            new GetResearcherByIdQuery { Id = id, CallerId = callerId },
             cancellationToken);
 
         if (result.IsSuccess)

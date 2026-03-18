@@ -21,7 +21,7 @@ namespace OpenMedSphere.Application.Tests.Researchers.Queries
         }
 
         private static Researcher CreateResearcher() =>
-            Researcher.Create("Dr. Smith", "smith@test.com", "MIT",
+            Researcher.Create("ext-1", "Dr. Smith", "smith@test.com", "MIT",
                 PublicKeySet.Create("mlkem-key", "mldsa-key", "x25519-key", "ecdsa-key", 1));
 
         [Fact]

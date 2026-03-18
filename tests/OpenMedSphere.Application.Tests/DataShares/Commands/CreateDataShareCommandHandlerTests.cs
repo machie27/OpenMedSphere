@@ -44,11 +44,11 @@ namespace OpenMedSphere.Application.Tests.DataShares.Commands
 
             _researcherRepositoryMock
                 .Setup(r => r.GetByIdAsync(SenderId, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(Researcher.Create("Sender", "sender@test.com", "MIT", keys));
+                .ReturnsAsync(Researcher.Create("ext-s", "Sender", "sender@test.com", "MIT", keys));
 
             _researcherRepositoryMock
                 .Setup(r => r.GetByIdAsync(RecipientId, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(Researcher.Create("Recipient", "recipient@test.com", "Harvard", keys));
+                .ReturnsAsync(Researcher.Create("ext-r", "Recipient", "recipient@test.com", "Harvard", keys));
 
             var patientId = PatientIdentifier.Generate();
             _patientDataRepositoryMock
@@ -106,7 +106,7 @@ namespace OpenMedSphere.Application.Tests.DataShares.Commands
 
             _researcherRepositoryMock
                 .Setup(r => r.GetByIdAsync(SenderId, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(Researcher.Create("Sender", "sender@test.com", "MIT", keys));
+                .ReturnsAsync(Researcher.Create("ext-s", "Sender", "sender@test.com", "MIT", keys));
 
             _researcherRepositoryMock
                 .Setup(r => r.GetByIdAsync(RecipientId, It.IsAny<CancellationToken>()))
@@ -126,11 +126,11 @@ namespace OpenMedSphere.Application.Tests.DataShares.Commands
 
             _researcherRepositoryMock
                 .Setup(r => r.GetByIdAsync(SenderId, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(Researcher.Create("Sender", "sender@test.com", "MIT", keys));
+                .ReturnsAsync(Researcher.Create("ext-s", "Sender", "sender@test.com", "MIT", keys));
 
             _researcherRepositoryMock
                 .Setup(r => r.GetByIdAsync(RecipientId, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(Researcher.Create("Recipient", "recipient@test.com", "Harvard", keys));
+                .ReturnsAsync(Researcher.Create("ext-r", "Recipient", "recipient@test.com", "Harvard", keys));
 
             _patientDataRepositoryMock
                 .Setup(r => r.GetByIdAsync(PatientDataIdValue, It.IsAny<CancellationToken>()))
@@ -151,11 +151,11 @@ namespace OpenMedSphere.Application.Tests.DataShares.Commands
 
             _researcherRepositoryMock
                 .Setup(r => r.GetByIdAsync(SenderId, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(Researcher.Create("Sender", "sender@test.com", "MIT", senderKeys));
+                .ReturnsAsync(Researcher.Create("ext-s", "Sender", "sender@test.com", "MIT", senderKeys));
 
             _researcherRepositoryMock
                 .Setup(r => r.GetByIdAsync(RecipientId, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(Researcher.Create("Recipient", "recipient@test.com", "Harvard", recipientKeys));
+                .ReturnsAsync(Researcher.Create("ext-r", "Recipient", "recipient@test.com", "Harvard", recipientKeys));
 
             var patientId = PatientIdentifier.Generate();
             _patientDataRepositoryMock
@@ -179,11 +179,11 @@ namespace OpenMedSphere.Application.Tests.DataShares.Commands
 
             _researcherRepositoryMock
                 .Setup(r => r.GetByIdAsync(SenderId, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(Researcher.Create("Sender", "sender@test.com", "MIT", senderKeys));
+                .ReturnsAsync(Researcher.Create("ext-s", "Sender", "sender@test.com", "MIT", senderKeys));
 
             _researcherRepositoryMock
                 .Setup(r => r.GetByIdAsync(RecipientId, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(Researcher.Create("Recipient", "recipient@test.com", "Harvard", recipientKeys));
+                .ReturnsAsync(Researcher.Create("ext-r", "Recipient", "recipient@test.com", "Harvard", recipientKeys));
 
             var patientId = PatientIdentifier.Generate();
             _patientDataRepositoryMock
@@ -204,7 +204,7 @@ namespace OpenMedSphere.Application.Tests.DataShares.Commands
         {
             var keys = PublicKeySet.Create("k1", "k2", "k3", "k4", 1);
 
-            var sender = Researcher.Create("Sender", "sender@test.com", "MIT", keys);
+            var sender = Researcher.Create("ext-s", "Sender", "sender@test.com", "MIT", keys);
             sender.Deactivate();
 
             _researcherRepositoryMock
@@ -239,9 +239,9 @@ namespace OpenMedSphere.Application.Tests.DataShares.Commands
 
             _researcherRepositoryMock
                 .Setup(r => r.GetByIdAsync(SenderId, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(Researcher.Create("Sender", "sender@test.com", "MIT", keys));
+                .ReturnsAsync(Researcher.Create("ext-s", "Sender", "sender@test.com", "MIT", keys));
 
-            var recipient = Researcher.Create("Recipient", "recipient@test.com", "Harvard", keys);
+            var recipient = Researcher.Create("ext-r", "Recipient", "recipient@test.com", "Harvard", keys);
             recipient.Deactivate();
 
             _researcherRepositoryMock

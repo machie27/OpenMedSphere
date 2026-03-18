@@ -1,3 +1,4 @@
+using OpenMedSphere.Application.Researchers.Queries;
 using OpenMedSphere.Domain.Entities;
 
 namespace OpenMedSphere.Application.Abstractions.Data;
@@ -9,6 +10,7 @@ namespace OpenMedSphere.Application.Abstractions.Data;
 public static class ResearcherIndexNames
 {
     public const string EmailUnique = "IX_Researchers_Email";
+    public const string ExternalIdUnique = "IX_Researchers_ExternalId";
 }
 
 /// <summary>
@@ -25,13 +27,22 @@ public interface IResearcherRepository : IRepository<Researcher, Guid>
     Task<Researcher?> GetByEmailAsync(string email, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets a researcher by their external identity identifier.
+    /// </summary>
+    /// <param name="externalId">The external identity identifier to search for.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The researcher, or null if not found.</returns>
+    Task<Researcher?> GetByExternalIdAsync(string externalId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Searches active researchers by name, email, or institution, ordered by most recent first.
+    /// Uses server-side projection to avoid loading public key columns.
     /// </summary>
     /// <param name="query">The search query.</param>
     /// <param name="skip">The number of results to skip.</param>
     /// <param name="take">The number of results to take.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>Active researchers matching the query.</returns>
-    Task<IReadOnlyList<Researcher>> SearchAsync(
+    /// <returns>Summary DTOs for active researchers matching the query.</returns>
+    Task<IReadOnlyList<ResearcherSummaryResponse>> SearchAsync(
         string query, int skip, int take, CancellationToken cancellationToken = default);
 }

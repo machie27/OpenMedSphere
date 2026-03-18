@@ -22,11 +22,13 @@ internal sealed class GetResearcherByIdQueryHandler(IResearcherRepository reposi
             return Result<ResearcherResponse>.NotFound($"Researcher with ID '{query.Id}' not found.");
         }
 
+        var isSelf = query.CallerId == researcher.Id;
+
         ResearcherResponse response = new()
         {
             Id = researcher.Id,
             Name = researcher.Name,
-            Email = researcher.Email,
+            Email = isSelf ? researcher.Email : null,
             Institution = researcher.Institution,
             KeyVersion = researcher.PublicKeys.KeyVersion,
             IsActive = researcher.IsActive,

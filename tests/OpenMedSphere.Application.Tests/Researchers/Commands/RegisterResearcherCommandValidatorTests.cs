@@ -10,6 +10,7 @@ namespace OpenMedSphere.Application.Tests.Researchers.Commands
 
         private static RegisterResearcherCommand CreateValidCommand() => new()
         {
+            ExternalId = "ext-1",
             Name = "Dr. Smith",
             Email = "smith@university.edu",
             Institution = "MIT",

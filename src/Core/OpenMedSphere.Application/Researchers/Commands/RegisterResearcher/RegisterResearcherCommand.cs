@@ -8,6 +8,11 @@ namespace OpenMedSphere.Application.Researchers.Commands.RegisterResearcher;
 public sealed record RegisterResearcherCommand : ICommand<Guid>
 {
     /// <summary>
+    /// Gets the external identity identifier from the authentication provider (e.g., JWT subject claim).
+    /// </summary>
+    public required string ExternalId { get; init; }
+
+    /// <summary>
     /// Gets the researcher's name.
     /// </summary>
     public required string Name { get; init; }

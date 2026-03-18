@@ -11,4 +11,10 @@ public sealed record GetResearcherByIdQuery : IQuery<ResearcherResponse>
     /// Gets the researcher ID.
     /// </summary>
     public required Guid Id { get; init; }
+
+    /// <summary>
+    /// Gets the ID of the authenticated caller. Email is only included when the caller
+    /// is viewing their own profile.
+    /// </summary>
+    public required Guid CallerId { get; init; }
 }
