@@ -52,6 +52,9 @@ internal sealed class CreateDataShareCommandHandler(
         // edge case — the xmin token does NOT protect here because we are inserting DataShare,
         // not updating Researcher. A client retrying with fresh key data will create a new share
         // if needed.
+        // Crucially, this is NOT a silent security failure: the payload is already encrypted
+        // client-side before this request. A stale key version means the recipient will fail to
+        // decrypt (wrong key), resulting in a useless share — not a compromised one.
         if (command.SenderKeyVersion != sender.PublicKeys.KeyVersion)
         {
             return Result<Guid>.InvalidOperation(

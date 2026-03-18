@@ -20,7 +20,9 @@ namespace OpenMedSphere.Infrastructure.Persistence.Migrations
                 nullable: false,
                 defaultValue: "");
 
-            // Backfill any existing rows with their PK as a unique placeholder.
+            // Backfill any existing rows with their PK (Guid) as a unique placeholder.
+            // This won't match a real JWT NameIdentifier, so backfilled researchers cannot
+            // authenticate via the normal flow — acceptable since there is no production data yet.
             migrationBuilder.Sql(
                 "UPDATE \"Researchers\" SET \"ExternalId\" = \"Id\"::text WHERE \"ExternalId\" = ''");
 

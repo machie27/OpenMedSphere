@@ -256,13 +256,14 @@ public sealed class MyEntity : AggregateRoot<Guid>
 - Check preconditions (status, permissions, active state) before calling domain methods
 - Return `Result.InvalidOperation()` for failed preconditions — do NOT catch domain exceptions for control flow
 - Validate entity exists → check authorization → check active state → check domain state → perform action
-- **Anti-enumeration**: When a caller is not authorized to act on an entity, return `NotFound` (not `InvalidOperation` or `Forbidden`) to prevent ID enumeration — an attacker must not be able to distinguish "doesn't exist" from "exists but not yours"
+- **Anti-enumeration**: When a caller is not authorized to act on an entity, return `NotFound` (not `InvalidOperation` or `Forbidden`) to prevent ID enumeration — an attacker must not be able to distinguish "doesn't exist" from "exists but not yours". Exception: when the caller looks up their *own* profile (e.g., sender in CreateDataShare), `InvalidOperation` for inactive state is correct — the caller already knows their own ID exists, so there is no enumeration vector, and they should learn they are deactivated
 - Always check `IsActive` before mutations (e.g., key rotation, share creation)
 - For time-sensitive preconditions (e.g., expiry dates), check at both validator AND handler level to avoid TOCTOU races
 - Handler preconditions must be a superset of domain method guards — if the domain throws, it escapes as an unhandled 500
 - Use `Guid.CreateVersion7()` for all new entity IDs (better index performance, time-sortable)
 - **Concurrent unique constraint handling**: Use `IUniqueConstraintViolationDetector` (Application abstraction) to detect database unique constraint violations without coupling to EF Core/Npgsql types — do NOT string-match on exception type names or inner exception messages
 - **Optimistic concurrency handling**: Use `IConcurrencyConflictDetector` (Application abstraction) to detect `DbUpdateConcurrencyException` without coupling to EF Core types. Handlers that mutate contested entities (Accept/Revoke DataShare, key rotation) should catch concurrency conflicts and return `Result.Conflict()`. PostgreSQL `xmin` row version tokens are configured on `DataShare` and `Researcher` entities via EF Core `IsRowVersion()`. Note: `xmin` only protects entities being **updated or deleted** in `SaveChangesAsync` — it does NOT protect read-only entities in the same unit of work (e.g., Researcher reads during DataShare insert)
+- **TOCTOU key version checks in CreateDataShare**: Key versions are validated against live Researcher data before insert, but a concurrent key rotation can complete in the gap. This is NOT a security failure — the payload is already encrypted client-side, so a stale key version means the recipient fails to decrypt (useless share), not a compromised one. The client retries with fresh keys.
 - **Error message hygiene**: Do not interpolate internal server state (entity versions, internal IDs, counts) into error messages returned to callers — the caller already knows what they submitted, and leaking server-side values is poor practice
 
 ### API Endpoint Patterns
@@ -358,7 +359,7 @@ AppHost uses User Secrets for local development:
 ### Audit Logging
 - EF Core `SaveChangesInterceptor` tracks changes to `PatientData`, `ResearchStudy`, `AnonymizationPolicy`, `Researcher`, and `DataShare` entities
 - Records entity type, ID, action (Created/Modified/Deleted), old/new values as JSON, and timestamp
-- Encrypted fields (`EncryptedPayload`, `EncapsulatedKey`, `Signature`) are excluded from audit — exclusion is scoped to `DataShare` entity type
+- Encrypted fields (`EncryptedPayload`, `EncapsulatedKey`, `Signature`) are excluded from audit — exclusion is doubly-gated on entity type (`entry.Entity is DataShare`) AND property name, so a future entity with a same-named property (e.g., `Signature` on a `Document`) would still be audited
 - Stored in the `AuditLog` table
 
 ## CI/CD
@@ -431,6 +432,7 @@ GitHub Actions workflow (`.github/workflows/pr-validation.yml`):
   - Command handler tests with Moq (CreatePatientData, AnonymizePatientData, CreateResearchStudy, CreateAnonymizationPolicy, RegisterResearcher, CreateDataShare, AcceptDataShare, RevokeDataShare, UpdateResearcherPublicKeys)
   - Query handler tests (GetDataShareById, GetIncomingShares, GetOutgoingShares, SearchResearchers — authorization, non-participant rejection, effective status, pagination, email visibility)
   - Validator tests (CreatePatientDataCommandValidator, CreateDataShareCommandValidator, RegisterResearcherCommandValidator, UpdateResearcherPublicKeysCommandValidator)
+  - **Missing validator tests**: GetIncomingSharesQueryValidator, GetOutgoingSharesQueryValidator, SearchResearchersQueryValidator — these use `ValidationConstants.ValidatePagination()` but have no dedicated tests verifying Page < 1 and PageSize > 100 rejection
 
 **Planned (Not Yet Implemented):**
 - React + Vite + TypeScript frontend (Blazor WASM has been removed)
@@ -438,7 +440,9 @@ GitHub Actions workflow (`.github/workflows/pr-validation.yml`):
 - Client-side key generation, encryption, decryption, signing, verification
 - IndexedDB private key storage (passphrase-protected)
 - Message queue integration (RabbitMQ/Kafka)
-- Integration tests
+- Integration tests (including PublicKeySet owned-type round-trip persist + reload to verify EF Core record serialization)
+- `pg_trgm` GIN index on `Researchers` (Name, Email, Institution) for researcher search — current `ILIKE`/`Contains()` queries do full table scans, which is a DoS concern at scale even with rate limiting (100 full scans/min per client)
+- Pagination validator tests for GetIncomingSharesQuery, GetOutgoingSharesQuery, SearchResearchersQuery
 
 ## Security Considerations
 
@@ -450,7 +454,8 @@ GitHub Actions workflow (`.github/workflows/pr-validation.yml`):
 - Rate limiting to prevent abuse
 - Audit logging for compliance tracking
 - E2E encrypted data sharing with zero-knowledge server architecture
-- Anti-enumeration on all data share endpoints — unauthorized callers always receive NotFound (never a distinct error that leaks existence or active status)
+- Anti-enumeration on all data share endpoints — unauthorized callers always receive NotFound (never a distinct error that leaks existence or active status). Self-lookups (e.g., sender checking own profile) may return `InvalidOperation` for inactive state since the caller already knows their own ID
+- Researcher search (`ILIKE`) currently lacks a `pg_trgm` GIN index — full table scans are a potential DoS vector at scale even with rate limiting
 - Optimistic concurrency protection on DataShare and Researcher entities via PostgreSQL `xmin` row version tokens
 - Hybrid quantum-safe cryptography: ML-KEM-768 + X25519 (key agreement), ML-DSA-65 + ECDSA (signatures), AES-256-GCM (symmetric)
 - One-researcher-per-identity: `ExternalId` unique constraint on `Researcher` binds each JWT identity to a single profile, preventing spam registrations
