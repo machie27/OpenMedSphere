@@ -52,6 +52,7 @@ public static class AuthEndpoints
         Claim[] claims =
         [
             new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
+            new Claim(Extensions.ClaimsPrincipalExtensions.ResearcherIdClaimType, userId.ToString()),
             new Claim(ClaimTypes.Name, "dev-user"),
             new Claim(ClaimTypes.Role, "Admin")
         ];

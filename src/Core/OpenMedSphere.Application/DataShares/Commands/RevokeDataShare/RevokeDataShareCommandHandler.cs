@@ -32,12 +32,12 @@ internal sealed class RevokeDataShareCommandHandler(
             return Result.NotFound($"Data share with ID '{command.DataShareId}' not found.");
         }
 
-        if (dataShare.Status is DataShareStatus.Revoked)
+        if (dataShare.EffectiveStatus is DataShareStatus.Revoked)
         {
             return Result.InvalidOperation("Data share is already revoked.");
         }
 
-        if (dataShare.Status is DataShareStatus.Pending && dataShare.IsExpired())
+        if (dataShare.EffectiveStatus is DataShareStatus.Expired)
         {
             return Result.InvalidOperation("Cannot revoke an expired data share.");
         }

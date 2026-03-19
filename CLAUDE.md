@@ -149,7 +149,7 @@ dotnet run --project src/Presentation/OpenMedSphere.API/OpenMedSphere.API.csproj
 
 ### Testing
 ```bash
-# Run all tests (269 tests: 159 domain + 110 application)
+# Run all tests (293 tests: 159 domain + 134 application)
 dotnet test OpenMedSphere.slnx
 
 # Run domain tests only
@@ -270,7 +270,8 @@ public sealed class MyEntity : AggregateRoot<Guid>
 - Use `if`/`else` with a `MapError()` switch expression — avoid nested ternary operators for Result-to-IResult mapping
 - `MapError()` uses an exhaustive switch: every `ErrorCode` variant has an explicit arm, and the `_` default throws `InvalidOperationException` to surface unmapped codes at development time
 - Map `ErrorCode.NotFound` → 404, `ErrorCode.Conflict` → 409, `ErrorCode.InvalidOperation` → 422, `ErrorCode.ValidationFailed` → 400
-- Separate `TryGetResearcherId` failures (401 Unauthorized) from ID mismatch (403 Forbid) — do not conflate
+- Use `TryGetExternalId` for registration (raw string NameIdentifier), `TryGetResearcherId` for all other endpoints (GUID from `oms:researcher_id` claim)
+- Separate `TryGetResearcherId`/`TryGetExternalId` failures (401 Unauthorized) from ID mismatch (403 Forbid) — do not conflate
 - All list/search endpoints must be paginated (default 20, max 100) — never return unbounded result sets
 
 ### Testing Conventions
@@ -337,8 +338,9 @@ AppHost uses User Secrets for local development:
 
 ### Authentication
 - **JWT Bearer** authentication on all API endpoints
-- Researcher identity extracted from JWT `NameIdentifier` claim (not from request parameters)
+- Two identity claims: `NameIdentifier` (raw external ID string, e.g., `auth0|123abc`) for registration, and custom `oms:researcher_id` (internal GUID) for all other endpoints
 - Registration binds the JWT `NameIdentifier` to `Researcher.ExternalId` (unique constraint prevents duplicate registrations per identity)
+- Registration uses a `RegisterResearcherRequest` DTO (no `ExternalId` in request body — extracted from JWT server-side)
 - Configuration via `Jwt:Key`, `Jwt:Issuer`, `Jwt:Audience` settings (with dev defaults)
 - Development token endpoint: `POST /api/auth/dev-token?researcherId={guid}` (only available in Development environment)
 
@@ -417,7 +419,7 @@ GitHub Actions workflow (`.github/workflows/pr-validation.yml`):
   - Expiry: computed at query time via `EffectiveStatus` (only Pending → Expired; Accepted shares stay Accepted past expiry — clients inspect `ExpiresAtUtc` directly)
   - Revocation: Accepted shares can be revoked even past expiry (medical data compliance — right to withdraw). Only expired *Pending* shares block revocation.
   - One-researcher-per-identity enforcement via `ExternalId` unique constraint (JWT `NameIdentifier` → `Researcher.ExternalId`)
-  - Authorization via JWT claims (researcher ID extracted from `NameIdentifier` claim, not request parameters)
+  - Authorization via JWT claims (external ID from `NameIdentifier` claim for registration, internal GUID from `oms:researcher_id` claim for other endpoints)
   - GET /api/researchers/{id} returns email only to the researcher themselves (GDPR compliance)
   - Search endpoint uses server-side projection to avoid loading public key columns
   - Active status checks on sender/recipient during share creation and key rotation
@@ -426,13 +428,13 @@ GitHub Actions workflow (`.github/workflows/pr-validation.yml`):
   - Handler-level precondition checks for state transitions (no exception-driven control flow)
   - Anti-enumeration: Accept/Revoke/CreateDataShare handlers return NotFound for unauthorized callers and inactive recipients (prevents share ID and researcher enumeration)
   - Optimistic concurrency on Accept/Revoke/UpdatePublicKeys handlers via `IConcurrencyConflictDetector`
-- **Testing (269 tests: 159 domain + 110 application):**
+- **Testing (293 tests: 159 domain + 134 application):**
   - Domain entity tests (PatientData, ResearchStudy, AnonymizationPolicy, Researcher, DataShare)
   - Value object tests (PatientIdentifier, DateRange, StudyCode, MedicalCode, PublicKeySet)
   - Command handler tests with Moq (CreatePatientData, AnonymizePatientData, CreateResearchStudy, CreateAnonymizationPolicy, RegisterResearcher, CreateDataShare, AcceptDataShare, RevokeDataShare, UpdateResearcherPublicKeys)
   - Query handler tests (GetDataShareById, GetIncomingShares, GetOutgoingShares, SearchResearchers — authorization, non-participant rejection, effective status, pagination, email visibility)
   - Validator tests (CreatePatientDataCommandValidator, CreateDataShareCommandValidator, RegisterResearcherCommandValidator, UpdateResearcherPublicKeysCommandValidator)
-  - **Missing validator tests**: GetIncomingSharesQueryValidator, GetOutgoingSharesQueryValidator, SearchResearchersQueryValidator — these use `ValidationConstants.ValidatePagination()` but have no dedicated tests verifying Page < 1 and PageSize > 100 rejection
+  - Validator tests: GetIncomingSharesQueryValidator, GetOutgoingSharesQueryValidator, SearchResearchersQueryValidator (pagination and required field validation)
 
 **Planned (Not Yet Implemented):**
 - React + Vite + TypeScript frontend (Blazor WASM has been removed)
@@ -442,7 +444,6 @@ GitHub Actions workflow (`.github/workflows/pr-validation.yml`):
 - Message queue integration (RabbitMQ/Kafka)
 - Integration tests (including PublicKeySet owned-type round-trip persist + reload to verify EF Core record serialization)
 - `pg_trgm` GIN index on `Researchers` (Name, Email, Institution) for researcher search — current `ILIKE`/`Contains()` queries do full table scans, which is a DoS concern at scale even with rate limiting (100 full scans/min per client)
-- Pagination validator tests for GetIncomingSharesQuery, GetOutgoingSharesQuery, SearchResearchersQuery
 
 ## Security Considerations
 

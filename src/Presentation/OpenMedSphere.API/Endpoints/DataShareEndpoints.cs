@@ -230,7 +230,6 @@ public static class DataShareEndpoints
 
         return result.MapError();
     }
-
 }
 
 /// <summary>

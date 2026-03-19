@@ -175,7 +175,7 @@ dotnet ef migrations add AddResearcherAndDataShare \
 - `RegisterResearcherCommandHandlerTests.cs` — 2 tests
 - `CreateDataShareCommandHandlerTests.cs` — 4 tests
 
-**Verification**: Build 0 errors, 157 tests all passing.
+**Verification**: Build 0 errors, 269 tests all passing (159 domain + 110 application).
 
 ---
 
@@ -336,7 +336,7 @@ Added notes about:
 
 ### Phase 1 Verification [PASSED]
 - [x] **Build**: `dotnet build OpenMedSphere.slnx` — 0 errors
-- [x] **Tests**: `dotnet test OpenMedSphere.slnx` — 157 tests all passing (133 domain + 24 application)
+- [x] **Tests**: `dotnet test OpenMedSphere.slnx` — 269 tests all passing (159 domain + 110 application)
 - [ ] **EF Migration**: `dotnet ef migrations add AddResearcherAndDataShare` — run when DB available
 - [ ] **API smoke test** (after running with Aspire):
   - Get dev token: `POST /api/auth/dev-token`

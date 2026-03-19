@@ -64,19 +64,29 @@ public static class ResearcherEndpoints
     }
 
     private static async Task<IResult> RegisterAsync(
-        RegisterResearcherCommand command,
+        RegisterResearcherRequest request,
         ClaimsPrincipal user,
         IMediator mediator,
         CancellationToken cancellationToken)
     {
-        if (!user.TryGetResearcherId(out Guid callerId))
+        if (!user.TryGetExternalId(out string externalId))
         {
             return Results.Unauthorized();
         }
 
-        var commandWithIdentity = command with { ExternalId = callerId.ToString() };
+        RegisterResearcherCommand command = new()
+        {
+            ExternalId = externalId,
+            Name = request.Name,
+            Email = request.Email,
+            Institution = request.Institution,
+            MlKemPublicKey = request.MlKemPublicKey,
+            MlDsaPublicKey = request.MlDsaPublicKey,
+            X25519PublicKey = request.X25519PublicKey,
+            EcdsaPublicKey = request.EcdsaPublicKey
+        };
 
-        Result<Guid> result = await mediator.SendAsync<Guid>(commandWithIdentity, cancellationToken);
+        Result<Guid> result = await mediator.SendAsync<Guid>(command, cancellationToken);
 
         if (result.IsSuccess)
         {
@@ -183,6 +193,48 @@ public static class ResearcherEndpoints
         return result.MapError();
     }
 
+}
+
+/// <summary>
+/// Request body for registering a new researcher. ExternalId is not included
+/// because it is extracted from the JWT NameIdentifier claim server-side.
+/// </summary>
+public sealed record RegisterResearcherRequest
+{
+    /// <summary>
+    /// Gets the researcher's name.
+    /// </summary>
+    public required string Name { get; init; }
+
+    /// <summary>
+    /// Gets the researcher's email address.
+    /// </summary>
+    public required string Email { get; init; }
+
+    /// <summary>
+    /// Gets the researcher's institution.
+    /// </summary>
+    public required string Institution { get; init; }
+
+    /// <summary>
+    /// Gets the ML-KEM-768 public key (Base64).
+    /// </summary>
+    public required string MlKemPublicKey { get; init; }
+
+    /// <summary>
+    /// Gets the ML-DSA-65 public key (Base64).
+    /// </summary>
+    public required string MlDsaPublicKey { get; init; }
+
+    /// <summary>
+    /// Gets the X25519 public key (Base64).
+    /// </summary>
+    public required string X25519PublicKey { get; init; }
+
+    /// <summary>
+    /// Gets the ECDSA P-256 public key (Base64).
+    /// </summary>
+    public required string EcdsaPublicKey { get; init; }
 }
 
 /// <summary>
