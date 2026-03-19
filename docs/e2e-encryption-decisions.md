@@ -179,4 +179,4 @@ Accepted -> Revoke() -> [Revoked]
 - External blob storage (S3/Azure Blob)
 - Separate `EncryptedPayloads` table
 
-**Rationale**: Base64-encoded ciphertext in a `text` column is simple and works well with JSON API transport. PostgreSQL TOAST automatically compresses and stores large values out-of-line. The 50MB validation limit keeps payloads reasonable. External blob storage can be added later if needed for very large datasets.
+**Rationale**: Base64-encoded ciphertext in a `text` column is simple and works well with JSON API transport. PostgreSQL TOAST automatically compresses and stores large values out-of-line. The current validation and API request size limits (5,000,000-character Base64 payload cap and 10 MB max request body) keep payloads reasonable. External blob storage can be added later if needed for very large datasets.

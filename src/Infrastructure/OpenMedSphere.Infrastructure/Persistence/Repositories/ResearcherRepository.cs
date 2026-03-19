@@ -32,13 +32,13 @@ internal sealed class ResearcherRepository(ApplicationDbContext dbContext)
         int take,
         CancellationToken cancellationToken = default)
     {
-        var queryLower = query.ToLower();
+        var queryLower = query.ToLowerInvariant();
 
         return await DbSet
             .Where(r => r.IsActive &&
-                        (r.Name.ToLower().Contains(queryLower) ||
-                         r.Email.ToLower().Contains(queryLower) ||
-                         r.Institution.ToLower().Contains(queryLower)))
+                        (r.Name.ToLowerInvariant().Contains(queryLower) ||
+                         r.Email.ToLowerInvariant().Contains(queryLower) ||
+                         r.Institution.ToLowerInvariant().Contains(queryLower)))
             .OrderByDescending(r => r.CreatedAtUtc)
             .Skip(skip)
             .Take(take)
