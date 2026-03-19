@@ -250,6 +250,7 @@ public sealed class MyEntity : AggregateRoot<Guid>
 - Use built-in .NET validation where possible (e.g., `MailAddress.TryCreate` for email, `Base64.IsValid()` for Base64 fields)
 - For Base64 validation, use `ValidationConstants.ValidateBase64Field()` — shared helper that avoids large allocations
 - For pagination validation, use `ValidationConstants.ValidatePagination()` — shared helper for Page/PageSize checks
+- Use semantically named constants (e.g., `MaxExternalIdLength` for JWT subject, not `MaxNameLength`) — even if the values match, the intent must be clear to prevent accidental misalignment during refactors
 - NEVER use `Convert.TryFromBase64String(value, new byte[value.Length], out _)` — allocates a full decode buffer
 
 ### Command Handler Patterns
@@ -264,6 +265,7 @@ public sealed class MyEntity : AggregateRoot<Guid>
 - **Concurrent unique constraint handling**: Use `IUniqueConstraintViolationDetector` (Application abstraction) to detect database unique constraint violations without coupling to EF Core/Npgsql types — do NOT string-match on exception type names or inner exception messages
 - **Optimistic concurrency handling**: Use `IConcurrencyConflictDetector` (Application abstraction) to detect `DbUpdateConcurrencyException` without coupling to EF Core types. Handlers that mutate contested entities (Accept/Revoke DataShare, key rotation) should catch concurrency conflicts and return `Result.Conflict()`. PostgreSQL `xmin` row version tokens are configured on `DataShare` and `Researcher` entities via EF Core `IsRowVersion()`. Note: `xmin` only protects entities being **updated or deleted** in `SaveChangesAsync` — it does NOT protect read-only entities in the same unit of work (e.g., Researcher reads during DataShare insert)
 - **TOCTOU key version checks in CreateDataShare**: Key versions are validated against live Researcher data before insert, but a concurrent key rotation can complete in the gap. This is NOT a security failure — the payload is already encrypted client-side, so a stale key version means the recipient fails to decrypt (useless share), not a compromised one. The client retries with fresh keys.
+- **Zero-knowledge PatientData ownership**: The server does not enforce PatientData ownership in CreateDataShare — authorization is a client-side concern. Only the sender (who possesses the private keys) can meaningfully encrypt data for a given patient record. Do not add server-side ownership checks as they would break the intended zero-knowledge architecture
 - **Error message hygiene**: Do not interpolate internal server state (entity versions, internal IDs, counts) into error messages returned to callers — the caller already knows what they submitted, and leaking server-side values is poor practice
 
 ### API Endpoint Patterns
@@ -366,11 +368,42 @@ AppHost uses User Secrets for local development:
 
 ## CI/CD
 
-GitHub Actions workflow (`.github/workflows/pr-validation.yml`):
+### GitHub Actions Workflows
+
+**`.github/workflows/pr-validation.yml`** — Build validation:
 - Runs on: PRs and pushes to `master` branch
-- .NET 10 setup (10.x)
-- Full solution build using `.slnx` format
+- .NET 10 setup (10.x), full solution build using `.slnx` format
 - Future: Tests, CodeQL security scanning, deployment
+
+**`.github/workflows/claude-code-review.yml`** — Automated PR review (Claude Opus 4.6):
+- Triggers: PR opened, ready for review, reopened, review requested
+- Skips draft PRs (`github.event.pull_request.draft == false`)
+- Progress tracking with inline comments
+- Uses `CLAUDE_CODE_OAUTH_TOKEN` secret
+
+**`.github/workflows/claude.yml`** — Interactive `@claude` assistant (read-only):
+- Triggers: `@claude` mentions in issue/PR comments, reviews, and new issues
+- Read-only permissions — analyzes and reports but does not comment or push
+
+**`.github/workflows/claude-issue-triage.yml`** — Auto-labels new issues:
+- Triggers: `issues: [opened]` (skips `@claude` issues)
+- Invokes `/label-issue` custom command (`.claude/commands/label-issue.md`)
+- Tools restricted to `scripts/gh.sh` and `scripts/edit-issue-labels.sh` (least-privilege)
+
+**`.github/workflows/claude-issue-dedup.yml`** — Duplicate issue detection:
+- Triggers: `issues: [opened]` (skips `@claude` issues)
+- Searches for similar existing issues, comments and labels duplicates
+- Uses GitHub MCP tools for issue search and commenting
+
+### Dependabot (`.github/dependabot.yml`)
+- Weekly NuGet and GitHub Actions dependency updates (Mondays)
+- NuGet packages grouped by area: Aspire, EF Core, OpenTelemetry, ASP.NET Core, testing
+- Auto-labeled with `infrastructure` + `P3`
+
+### Custom Commands and Scripts
+- `.claude/commands/label-issue.md` — Slash command for issue triage (analyze + apply labels only, no comments)
+- `scripts/gh.sh` — Thin `gh` CLI wrapper (allowed tool for triage)
+- `scripts/edit-issue-labels.sh` — Validates labels exist in repo before applying via `gh issue edit`
 
 ## Current Implementation Status
 

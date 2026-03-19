@@ -45,6 +45,10 @@ internal sealed class CreateDataShareCommandHandler(
             return Result<Guid>.NotFound($"Patient data with ID '{command.PatientDataId}' not found.");
         }
 
+        // The server does not enforce PatientData ownership — authorization is a client-side concern
+        // in the zero-knowledge architecture. Only the sender (who possesses the private keys) can
+        // meaningfully encrypt data for a given patient record.
+
         // Key versions are validated before DataShare.Create to prevent stale-key encryption.
         // Note: a small TOCTOU window exists between the key version checks above and the
         // insert below. A concurrent key rotation could complete in this window, leaving the

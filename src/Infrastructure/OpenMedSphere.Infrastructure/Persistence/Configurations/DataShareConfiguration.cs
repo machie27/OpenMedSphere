@@ -39,9 +39,11 @@ internal sealed class DataShareConfiguration : IEntityTypeConfiguration<DataShar
             .IsRequired();
 
         builder.Property(d => d.EncapsulatedKey)
+            .HasColumnType("text")
             .IsRequired();
 
         builder.Property(d => d.Signature)
+            .HasColumnType("text")
             .IsRequired();
 
         builder.Property(d => d.SenderKeyVersion).IsRequired();

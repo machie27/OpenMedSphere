@@ -27,6 +27,10 @@ internal static class ValidationConstants
 
     public const int MaxNameLength = 200;
     /// <summary>
+    /// Maximum length for external identity (JWT subject claim). Matches Researcher.ExternalId column HasMaxLength(200).
+    /// </summary>
+    public const int MaxExternalIdLength = 200;
+    /// <summary>
     /// RFC 5321 maximum email address length (64 local + 1 '@' + 255 domain).
     /// </summary>
     public const int MaxEmailLength = 320;
