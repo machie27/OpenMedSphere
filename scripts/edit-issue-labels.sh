@@ -6,6 +6,10 @@
 
 set -euo pipefail
 
+usage() {
+  echo "Usage: $0 --issue <number> [--add-label <label>]... [--remove-label <label>]..." >&2
+}
+
 ISSUE=""
 ADD_LABELS=()
 REMOVE_LABELS=()
@@ -14,18 +18,35 @@ REMOVE_LABELS=()
 while [[ $# -gt 0 ]]; do
   case $1 in
     --issue)
+      if [[ $# -lt 2 ]]; then
+        echo "Error: --issue requires an issue number." >&2
+        usage
+        exit 1
+      fi
       ISSUE="$2"
       shift 2
       ;;
     --add-label)
+      if [[ $# -lt 2 ]]; then
+        echo "Error: --add-label requires a label value." >&2
+        usage
+        exit 1
+      fi
       ADD_LABELS+=("$2")
       shift 2
       ;;
     --remove-label)
+      if [[ $# -lt 2 ]]; then
+        echo "Error: --remove-label requires a label value." >&2
+        usage
+        exit 1
+      fi
       REMOVE_LABELS+=("$2")
       shift 2
       ;;
     *)
+      echo "Error: Unknown option: $1" >&2
+      usage
       exit 1
       ;;
   esac
@@ -33,14 +54,20 @@ done
 
 # Validate issue number
 if [[ -z "$ISSUE" ]]; then
+  echo "Error: --issue is required." >&2
+  usage
   exit 1
 fi
 
 if ! [[ "$ISSUE" =~ ^[0-9]+$ ]]; then
+  echo "Error: Issue must be a numeric ID, got '$ISSUE'." >&2
+  usage
   exit 1
 fi
 
 if [[ ${#ADD_LABELS[@]} -eq 0 && ${#REMOVE_LABELS[@]} -eq 0 ]]; then
+  echo "Error: At least one --add-label or --remove-label must be specified." >&2
+  usage
   exit 1
 fi
 
