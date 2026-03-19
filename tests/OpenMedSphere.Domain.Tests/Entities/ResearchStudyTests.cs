@@ -178,6 +178,16 @@ namespace OpenMedSphere.Domain.Tests.Entities
         }
 
         [Fact]
+        public void AddPatientData_WhenInactive_ThrowsInvalidOperationException()
+        {
+            ResearchStudy study = CreateDefaultStudy();
+            study.Deactivate();
+
+            Assert.Throws<InvalidOperationException>(() =>
+                study.AddPatientData(Guid.NewGuid()));
+        }
+
+        [Fact]
         public void AddPatientData_WhenAtMaxParticipants_ThrowsInvalidOperationException()
         {
             ResearchStudy study = CreateDefaultStudy();

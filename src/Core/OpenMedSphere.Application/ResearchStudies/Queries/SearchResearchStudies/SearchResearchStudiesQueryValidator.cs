@@ -22,15 +22,7 @@ internal sealed class SearchResearchStudiesQueryValidator : IValidator<SearchRes
             errors.Add(new ValidationError(nameof(instance.TitleSearch), $"Title search must not exceed {ValidationConstants.MaxSearchTextLength} characters."));
         }
 
-        if (instance.Page < ValidationConstants.MinPage)
-        {
-            errors.Add(new ValidationError(nameof(instance.Page), $"Page must be at least {ValidationConstants.MinPage}."));
-        }
-
-        if (instance.PageSize < 1 || instance.PageSize > ValidationConstants.MaxPageSize)
-        {
-            errors.Add(new ValidationError(nameof(instance.PageSize), $"Page size must be between 1 and {ValidationConstants.MaxPageSize}."));
-        }
+        ValidationConstants.ValidatePagination(instance.Page, nameof(instance.Page), instance.PageSize, nameof(instance.PageSize), errors);
 
         return Task.FromResult(errors.Count == 0 ? ValidationResult.Success() : new ValidationResult { Errors = errors });
     }

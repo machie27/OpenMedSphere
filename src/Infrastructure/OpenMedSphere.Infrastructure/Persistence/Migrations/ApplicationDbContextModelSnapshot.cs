@@ -19,7 +19,7 @@ namespace OpenMedSphere.Infrastructure.Persistence.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.2")
+                .HasAnnotation("ProductVersion", "10.0.5")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -181,6 +181,74 @@ namespace OpenMedSphere.Infrastructure.Persistence.Migrations
                     b.ToTable("AuditLog", (string)null);
                 });
 
+            modelBuilder.Entity("OpenMedSphere.Domain.Entities.DataShare", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("AccessedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("EncapsulatedKey")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("EncryptedPayload")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("ExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("PatientDataId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("RecipientKeyVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("RecipientResearcherId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SenderKeyVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("SenderResearcherId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("SharedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Signature")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PatientDataId")
+                        .HasDatabaseName("IX_DataShares_PatientDataId");
+
+                    b.HasIndex("RecipientResearcherId", "SharedAtUtc")
+                        .HasDatabaseName("IX_DataShares_RecipientResearcherId_SharedAtUtc");
+
+                    b.HasIndex("SenderResearcherId", "SharedAtUtc")
+                        .HasDatabaseName("IX_DataShares_SenderResearcherId_SharedAtUtc");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("IX_DataShares_Status");
+
+                    b.ToTable("DataShares", (string)null);
+                });
+
             modelBuilder.Entity("OpenMedSphere.Domain.Entities.PatientData", b =>
                 {
                     b.Property<Guid>("Id")
@@ -327,6 +395,81 @@ namespace OpenMedSphere.Infrastructure.Persistence.Migrations
                     b.ToTable("ResearchStudies", (string)null);
                 });
 
+            modelBuilder.Entity("OpenMedSphere.Domain.Entities.Researcher", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ExternalId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)");
+
+                    b.Property<string>("Institution")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExternalId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Researchers_ExternalId");
+
+                    b.HasIndex("Email")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Researchers_Email");
+
+                    b.HasIndex("Institution")
+                        .HasDatabaseName("IX_Researchers_Institution");
+
+                    b.HasIndex("IsActive")
+                        .HasDatabaseName("IX_Researchers_IsActive");
+
+                    b.ToTable("Researchers", (string)null);
+                });
+
+            modelBuilder.Entity("OpenMedSphere.Domain.Entities.DataShare", b =>
+                {
+                    b.HasOne("OpenMedSphere.Domain.Entities.PatientData", null)
+                        .WithMany()
+                        .HasForeignKey("PatientDataId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("OpenMedSphere.Domain.Entities.Researcher", null)
+                        .WithMany()
+                        .HasForeignKey("RecipientResearcherId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("OpenMedSphere.Domain.Entities.Researcher", null)
+                        .WithMany()
+                        .HasForeignKey("SenderResearcherId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("OpenMedSphere.Domain.Entities.PatientData", b =>
                 {
                     b.OwnsOne("OpenMedSphere.Domain.ValueObjects.MedicalCode", "PrimaryDiagnosisCode", b1 =>
@@ -419,6 +562,53 @@ namespace OpenMedSphere.Infrastructure.Persistence.Migrations
                         });
 
                     b.Navigation("Code")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("OpenMedSphere.Domain.Entities.Researcher", b =>
+                {
+                    b.OwnsOne("OpenMedSphere.Domain.ValueObjects.PublicKeySet", "PublicKeys", b1 =>
+                        {
+                            b1.Property<Guid>("ResearcherId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("EcdsaPublicKey")
+                                .IsRequired()
+                                .HasMaxLength(10000)
+                                .HasColumnType("character varying(10000)")
+                                .HasColumnName("PublicKeys_Ecdsa");
+
+                            b1.Property<int>("KeyVersion")
+                                .HasColumnType("integer")
+                                .HasColumnName("PublicKeys_KeyVersion");
+
+                            b1.Property<string>("MlDsaPublicKey")
+                                .IsRequired()
+                                .HasMaxLength(10000)
+                                .HasColumnType("character varying(10000)")
+                                .HasColumnName("PublicKeys_MlDsa");
+
+                            b1.Property<string>("MlKemPublicKey")
+                                .IsRequired()
+                                .HasMaxLength(10000)
+                                .HasColumnType("character varying(10000)")
+                                .HasColumnName("PublicKeys_MlKem");
+
+                            b1.Property<string>("X25519PublicKey")
+                                .IsRequired()
+                                .HasMaxLength(10000)
+                                .HasColumnType("character varying(10000)")
+                                .HasColumnName("PublicKeys_X25519");
+
+                            b1.HasKey("ResearcherId");
+
+                            b1.ToTable("Researchers");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ResearcherId");
+                        });
+
+                    b.Navigation("PublicKeys")
                         .IsRequired();
                 });
 #pragma warning restore 612, 618

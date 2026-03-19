@@ -235,6 +235,15 @@ namespace OpenMedSphere.Domain.Tests.Entities
         }
 
         [Fact]
+        public void MarkAsAnonymized_WhenAlreadyAnonymized_ThrowsInvalidOperationException()
+        {
+            PatientData patient = PatientData.Create(PatientIdentifier.Generate());
+            patient.MarkAsAnonymized(Guid.NewGuid());
+
+            Assert.Throws<InvalidOperationException>(() => patient.MarkAsAnonymized(Guid.NewGuid()));
+        }
+
+        [Fact]
         public void MarkAsAnonymized_WithValidPolicyId_RaisesPatientDataAnonymizedEvent()
         {
             PatientData patient = PatientData.Create(PatientIdentifier.Generate());

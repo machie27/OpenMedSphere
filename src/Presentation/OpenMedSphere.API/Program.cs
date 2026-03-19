@@ -13,6 +13,9 @@ using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.WebHost.ConfigureKestrel(options =>
+    options.Limits.MaxRequestBodySize = 10 * 1024 * 1024); // 10 MB hard cap
+
 builder.AddServiceDefaults();
 
 builder.Services.AddOpenApi(options =>
@@ -32,6 +35,8 @@ builder.Services.AddOpenApi(options =>
     });
 });
 builder.AddRedisDistributedCache("cache");
+
+builder.Services.AddProblemDetails();
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
@@ -102,6 +107,8 @@ if (app.Environment.IsDevelopment())
     app.MapAuthEndpoints();
 }
 
+app.UseExceptionHandler();
+app.UseStatusCodePages();
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
@@ -111,5 +118,7 @@ app.MapPatientDataEndpoints();
 app.MapResearchStudyEndpoints();
 app.MapAnonymizationPolicyEndpoints();
 app.MapMedicalTerminologyEndpoints();
+app.MapResearcherEndpoints();
+app.MapDataShareEndpoints();
 
 app.Run();

@@ -5,10 +5,12 @@ name: PR Review with Progress Tracking
 
 on:
   pull_request:
-    types: [opened, synchronize, ready_for_review, reopened]
+    types: [opened, ready_for_review, reopened, review_requested]
 
 jobs:
   review-with-tracking:
+    # Skip draft PRs
+    if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     permissions:
       contents: read

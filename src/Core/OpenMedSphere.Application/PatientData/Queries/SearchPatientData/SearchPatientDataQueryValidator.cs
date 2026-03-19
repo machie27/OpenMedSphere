@@ -27,15 +27,7 @@ internal sealed class SearchPatientDataQueryValidator : IValidator<SearchPatient
             errors.Add(new ValidationError(nameof(instance.Region), $"Region must not exceed {ValidationConstants.MaxRegionLength} characters."));
         }
 
-        if (instance.Page < ValidationConstants.MinPage)
-        {
-            errors.Add(new ValidationError(nameof(instance.Page), $"Page must be at least {ValidationConstants.MinPage}."));
-        }
-
-        if (instance.PageSize < 1 || instance.PageSize > ValidationConstants.MaxPageSize)
-        {
-            errors.Add(new ValidationError(nameof(instance.PageSize), $"Page size must be between 1 and {ValidationConstants.MaxPageSize}."));
-        }
+        ValidationConstants.ValidatePagination(instance.Page, nameof(instance.Page), instance.PageSize, nameof(instance.PageSize), errors);
 
         if (instance.CollectedAfter.HasValue && instance.CollectedBefore.HasValue &&
             instance.CollectedBefore.Value < instance.CollectedAfter.Value)

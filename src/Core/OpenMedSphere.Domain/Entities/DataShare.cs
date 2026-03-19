@@ -1,0 +1,248 @@
+using OpenMedSphere.Domain.Enums;
+using OpenMedSphere.Domain.Events;
+using OpenMedSphere.Domain.Primitives;
+
+namespace OpenMedSphere.Domain.Entities;
+
+/// <summary>
+/// Represents an encrypted data share between researchers.
+/// The server stores encrypted blobs opaquely — it never sees plaintext patient data.
+/// This is an aggregate root for the data sharing bounded context.
+/// </summary>
+public sealed class DataShare : AggregateRoot<Guid>
+{
+    /// <summary>
+    /// Gets the ID of the researcher who sent the share.
+    /// </summary>
+    public required Guid SenderResearcherId { get; init; }
+
+    /// <summary>
+    /// Gets the ID of the researcher who receives the share.
+    /// </summary>
+    public required Guid RecipientResearcherId { get; init; }
+
+    /// <summary>
+    /// Gets the ID of the patient data being shared.
+    /// </summary>
+    public required Guid PatientDataId { get; init; }
+
+    /// <summary>
+    /// Gets the Base64-encoded AES-256-GCM ciphertext of the patient data.
+    /// </summary>
+    public required string EncryptedPayload { get; init; }
+
+    /// <summary>
+    /// Gets the Base64-encoded hybrid KEM encapsulated key.
+    /// </summary>
+    public required string EncapsulatedKey { get; init; }
+
+    /// <summary>
+    /// Gets the Base64-encoded hybrid signature (ML-DSA-65 + ECDSA).
+    /// </summary>
+    public required string Signature { get; init; }
+
+    /// <summary>
+    /// Gets the sender's key version used for this share.
+    /// </summary>
+    public required int SenderKeyVersion { get; init; }
+
+    /// <summary>
+    /// Gets the recipient's key version used for this share.
+    /// </summary>
+    public required int RecipientKeyVersion { get; init; }
+
+    /// <summary>
+    /// Gets the current status of the data share.
+    /// </summary>
+    public DataShareStatus Status { get; private set; } = DataShareStatus.Pending;
+
+    /// <summary>
+    /// Gets the date and time when the data was shared.
+    /// Currently set at creation, but kept separate from <see cref="CreatedAtUtc"/>
+    /// to support future draft or scheduled share workflows.
+    /// </summary>
+    public DateTime SharedAtUtc { get; init; }
+
+    /// <summary>
+    /// Gets the date and time when the share was accessed by the recipient.
+    /// </summary>
+    public DateTime? AccessedAtUtc { get; private set; }
+
+    /// <summary>
+    /// Gets the date and time when the share expires.
+    /// </summary>
+    public DateTime? ExpiresAtUtc { get; init; }
+
+    /// <summary>
+    /// Gets the date and time when the share was created.
+    /// </summary>
+    public DateTime CreatedAtUtc { get; init; }
+
+    /// <summary>
+    /// Gets the date and time when the share was last updated.
+    /// </summary>
+    public DateTime? UpdatedAtUtc { get; private set; }
+
+    /// <summary>
+    /// Required for EF Core.
+    /// </summary>
+    private DataShare() : base()
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DataShare"/> class.
+    /// </summary>
+    /// <param name="id">The unique identifier for the data share.</param>
+    private DataShare(Guid id) : base(id)
+    {
+        CreatedAtUtc = DateTime.UtcNow;
+        SharedAtUtc = CreatedAtUtc;
+    }
+
+    /// <summary>
+    /// Creates a new encrypted data share.
+    /// </summary>
+    /// <param name="senderResearcherId">The sender researcher's ID.</param>
+    /// <param name="recipientResearcherId">The recipient researcher's ID.</param>
+    /// <param name="patientDataId">The patient data ID.</param>
+    /// <param name="encryptedPayload">The Base64-encoded encrypted payload.</param>
+    /// <param name="encapsulatedKey">The Base64-encoded encapsulated key.</param>
+    /// <param name="signature">The Base64-encoded signature.</param>
+    /// <param name="senderKeyVersion">The sender's key version.</param>
+    /// <param name="recipientKeyVersion">The recipient's key version.</param>
+    /// <param name="expiresAtUtc">The optional expiry date.</param>
+    /// <returns>A new data share.</returns>
+    public static DataShare Create(
+        Guid senderResearcherId,
+        Guid recipientResearcherId,
+        Guid patientDataId,
+        string encryptedPayload,
+        string encapsulatedKey,
+        string signature,
+        int senderKeyVersion,
+        int recipientKeyVersion,
+        DateTime? expiresAtUtc = null)
+    {
+        if (senderResearcherId == Guid.Empty)
+        {
+            throw new ArgumentException("Sender researcher ID cannot be empty.", nameof(senderResearcherId));
+        }
+
+        if (recipientResearcherId == Guid.Empty)
+        {
+            throw new ArgumentException("Recipient researcher ID cannot be empty.", nameof(recipientResearcherId));
+        }
+
+        if (patientDataId == Guid.Empty)
+        {
+            throw new ArgumentException("Patient data ID cannot be empty.", nameof(patientDataId));
+        }
+
+        if (senderResearcherId == recipientResearcherId)
+        {
+            throw new ArgumentException("Sender and recipient must be different researchers.");
+        }
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(encryptedPayload);
+        ArgumentException.ThrowIfNullOrWhiteSpace(encapsulatedKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(signature);
+        ArgumentOutOfRangeException.ThrowIfLessThan(senderKeyVersion, 1);
+        ArgumentOutOfRangeException.ThrowIfLessThan(recipientKeyVersion, 1);
+
+        if (expiresAtUtc.HasValue && expiresAtUtc.Value <= DateTime.UtcNow)
+        {
+            throw new ArgumentException("Expiry date must be in the future.", nameof(expiresAtUtc));
+        }
+
+        var dataShare = new DataShare(Guid.CreateVersion7())
+        {
+            SenderResearcherId = senderResearcherId,
+            RecipientResearcherId = recipientResearcherId,
+            PatientDataId = patientDataId,
+            EncryptedPayload = encryptedPayload,
+            EncapsulatedKey = encapsulatedKey,
+            Signature = signature,
+            SenderKeyVersion = senderKeyVersion,
+            RecipientKeyVersion = recipientKeyVersion,
+            ExpiresAtUtc = expiresAtUtc
+        };
+
+        dataShare.RaiseDomainEvent(new PatientDataSharedEvent(
+            dataShare.Id, senderResearcherId, recipientResearcherId, patientDataId));
+
+        return dataShare;
+    }
+
+    /// <summary>
+    /// Accepts the data share, marking it as accessed by the recipient.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown when the share is not in Pending status or has expired.</exception>
+    public void Accept()
+    {
+        if (Status is not DataShareStatus.Pending)
+        {
+            throw new InvalidOperationException($"Cannot accept a data share with status '{Status}'.");
+        }
+
+        if (IsExpired())
+        {
+            throw new InvalidOperationException("Cannot accept an expired data share.");
+        }
+
+        var now = DateTime.UtcNow;
+        Status = DataShareStatus.Accepted;
+        AccessedAtUtc = now;
+        UpdatedAtUtc = now;
+
+        RaiseDomainEvent(new DataShareAccessedEvent(Id, RecipientResearcherId));
+    }
+
+    /// <summary>
+    /// Revokes the data share. Can be called on both Pending and Accepted shares —
+    /// a sender may revoke access even after the recipient has accepted, which is
+    /// required for medical data compliance (right to withdraw shared data).
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown when the share is already revoked or is an expired Pending share.</exception>
+    public void Revoke()
+    {
+        if (Status is DataShareStatus.Revoked)
+        {
+            throw new InvalidOperationException("Data share is already revoked.");
+        }
+
+        if (Status is DataShareStatus.Pending && IsExpired())
+        {
+            throw new InvalidOperationException("Cannot revoke an expired data share.");
+        }
+
+        Status = DataShareStatus.Revoked;
+        UpdatedAtUtc = DateTime.UtcNow;
+
+        RaiseDomainEvent(new DataShareRevokedEvent(Id, SenderResearcherId));
+    }
+
+    /// <summary>
+    /// Determines whether the data share has expired.
+    /// Expiry is computed at query time rather than materialized to the <see cref="Status"/> property.
+    /// This avoids the need for a background job and ensures real-time accuracy.
+    /// Queries filtering expired shares should use <see cref="ExpiresAtUtc"/> directly.
+    /// </summary>
+    /// <returns>True if the share has expired; otherwise, false.</returns>
+    public bool IsExpired() =>
+        ExpiresAtUtc.HasValue && ExpiresAtUtc.Value <= DateTime.UtcNow;
+
+    /// <summary>
+    /// Gets the effective status, reflecting expiry at query time.
+    /// Use this for API responses instead of <see cref="Status"/> directly.
+    /// Only Pending shares transition to Expired — an Accepted share past its <see cref="ExpiresAtUtc"/>
+    /// remains Accepted (the data was already accessed). Clients should inspect
+    /// <see cref="ExpiresAtUtc"/> directly to determine whether the access window is still open.
+    /// </summary>
+    /// <remarks>
+    /// The EF Core expression tree equivalent is <c>DataShareProjections.ToSummary</c>
+    /// in the Application layer. Both must stay in sync.
+    /// </remarks>
+    public DataShareStatus EffectiveStatus =>
+        IsExpired() && Status is DataShareStatus.Pending ? DataShareStatus.Expired : Status;
+}

@@ -27,9 +27,15 @@ internal sealed class ResearchStudyRepository(ApplicationDbContext dbContext)
     /// <inheritdoc />
     public async Task<IReadOnlyList<ResearchStudy>> GetByResearchAreaAsync(
         string researchArea,
-        CancellationToken cancellationToken = default) =>
-        await DbSet
+        CancellationToken cancellationToken = default)
+    {
+        // Uses ToLower().Contains() instead of EF.Functions.ILike — EF Core 10 + Npgsql parameterizes
+        // Contains() so user-supplied wildcards are safe, and both generate full-table scans anyway.
+        var areaLower = researchArea.ToLowerInvariant();
+
+        return await DbSet
             .Where(r => r.ResearchArea != null &&
-                        EF.Functions.ILike(r.ResearchArea, $"%{researchArea}%"))
+                        r.ResearchArea.ToLowerInvariant().Contains(areaLower))
             .ToListAsync(cancellationToken);
+    }
 }

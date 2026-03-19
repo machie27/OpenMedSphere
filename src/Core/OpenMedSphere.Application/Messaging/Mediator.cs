@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Reflection;
+using System.Runtime.ExceptionServices;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -66,6 +67,13 @@ internal sealed partial class Mediator(
 
             return commandResult;
         }
+        catch (TargetInvocationException tie) when (tie.InnerException is not null)
+        {
+            TimeSpan elapsed = Stopwatch.GetElapsedTime(startTimestamp);
+            LogCommandException(commandName, elapsed.TotalMilliseconds, tie.InnerException);
+            ExceptionDispatchInfo.Capture(tie.InnerException).Throw();
+            throw; // Unreachable — required for compiler
+        }
         catch (Exception ex)
         {
             TimeSpan elapsed = Stopwatch.GetElapsedTime(startTimestamp);
@@ -122,6 +130,13 @@ internal sealed partial class Mediator(
 
             return commandResult;
         }
+        catch (TargetInvocationException tie) when (tie.InnerException is not null)
+        {
+            TimeSpan elapsed = Stopwatch.GetElapsedTime(startTimestamp);
+            LogCommandWithResponseException(commandName, typeof(TResponse).Name, elapsed.TotalMilliseconds, tie.InnerException);
+            ExceptionDispatchInfo.Capture(tie.InnerException).Throw();
+            throw; // Unreachable — required for compiler
+        }
         catch (Exception ex)
         {
             TimeSpan elapsed = Stopwatch.GetElapsedTime(startTimestamp);
@@ -177,6 +192,13 @@ internal sealed partial class Mediator(
             }
 
             return queryResult;
+        }
+        catch (TargetInvocationException tie) when (tie.InnerException is not null)
+        {
+            TimeSpan elapsed = Stopwatch.GetElapsedTime(startTimestamp);
+            LogQueryException(queryName, typeof(TResponse).Name, elapsed.TotalMilliseconds, tie.InnerException);
+            ExceptionDispatchInfo.Capture(tie.InnerException).Throw();
+            throw; // Unreachable — required for compiler
         }
         catch (Exception ex)
         {

@@ -15,11 +15,13 @@ internal sealed class PatientDataRepository(ApplicationDbContext dbContext)
         string diagnosis,
         CancellationToken cancellationToken = default)
     {
-        string escapedDiagnosis = EscapeLikePattern(diagnosis);
+        // Uses ToLower().Contains() instead of EF.Functions.ILike — EF Core 10 + Npgsql parameterizes
+        // Contains() so user-supplied wildcards are safe, and both generate full-table scans anyway.
+        var diagnosisLower = diagnosis.ToLowerInvariant();
 
         return await DbSet
             .Where(p => p.PrimaryDiagnosis != null &&
-                        EF.Functions.ILike(p.PrimaryDiagnosis, $"%{escapedDiagnosis}%"))
+                        p.PrimaryDiagnosis.ToLowerInvariant().Contains(diagnosisLower))
             .ToListAsync(cancellationToken);
     }
 
@@ -29,10 +31,4 @@ internal sealed class PatientDataRepository(ApplicationDbContext dbContext)
         await DbSet
             .Where(p => p.IsAnonymized)
             .ToListAsync(cancellationToken);
-
-    private static string EscapeLikePattern(string input) =>
-        input
-            .Replace("\\", "\\\\")
-            .Replace("%", "\\%")
-            .Replace("_", "\\_");
 }

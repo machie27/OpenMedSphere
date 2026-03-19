@@ -7,7 +7,7 @@ General
 Formatting
 
  * Apply code-formatting style defined in .editorconfig.
- * Prefer file-scoped namespace declarations and single-line using directives.
+ * Use file-scoped namespace declarations (per .editorconfig) and single-line using directives.
  * Insert a newline before the opening curly brace of any code block (e.g., after if, for, while, foreach, using, try, etc.).
  * Ensure that the final return statement of a method is on its own line.
  * Use pattern matching and switch expressions wherever possible.
@@ -47,4 +47,4 @@ Architecture
  * Use the Builder pattern for constructing complex objects.
  * Use the inbox/outbox pattern for managing distributed transactions.
  * Use the mediator pattern for decoupling components. 
- * Prefer minimal APIs and if needed you can use the FastEndpoints library for building APIs.
+ * Prefer minimal APIs for building API endpoints.

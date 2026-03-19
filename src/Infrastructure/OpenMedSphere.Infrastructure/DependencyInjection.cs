@@ -59,6 +59,10 @@ public static class DependencyInjection
         services.AddScoped<IPatientDataRepository, PatientDataRepository>();
         services.AddScoped<IResearchStudyRepository, ResearchStudyRepository>();
         services.AddScoped<IAnonymizationPolicyRepository, AnonymizationPolicyRepository>();
+        services.AddScoped<IResearcherRepository, ResearcherRepository>();
+        services.AddScoped<IDataShareRepository, DataShareRepository>();
+        services.AddSingleton<IUniqueConstraintViolationDetector, NpgsqlUniqueConstraintViolationDetector>();
+        services.AddSingleton<IConcurrencyConflictDetector, EfCoreConcurrencyConflictDetector>();
     }
 
     private static void AddMedicalTerminology(IServiceCollection services, IConfiguration configuration)
@@ -77,12 +81,12 @@ public static class DependencyInjection
             };
         });
 
-        // Always register the fallback provider for baseline ICD-11 lookup
-        services.AddSingleton<IMedicalTerminologyProvider, FallbackTerminologyProvider>();
-
         if (icd11Options.IsConfigured)
         {
-            // When ICD-11 API is configured, also register the API-backed provider
+            // When ICD-11 API is configured, register the API-backed provider.
+            // DelegatingHandler must be transient — HttpClientFactory creates a new instance per pipeline.
+            // Token caching and SemaphoreSlim coordination are instance-level (handler is long-lived
+            // via HttpClientFactory's handler pool, not via DI lifetime).
             services.AddTransient<Icd11AuthenticationHandler>();
 
             services.AddHttpClient<IMedicalTerminologyProvider, Icd11TerminologyProvider>(client =>
@@ -92,6 +96,11 @@ public static class DependencyInjection
                     new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
             })
             .AddHttpMessageHandler<Icd11AuthenticationHandler>();
+        }
+        else
+        {
+            // Fallback provider for when ICD-11 API is not configured
+            services.AddSingleton<IMedicalTerminologyProvider, FallbackTerminologyProvider>();
         }
 
         // Composite service aggregates all registered providers

@@ -30,7 +30,11 @@ public static class AuthEndpoints
         return app;
     }
 
-    private static IResult GenerateDevToken(IConfiguration configuration, IHostEnvironment environment)
+    private static IResult GenerateDevToken(
+        IConfiguration configuration,
+        IHostEnvironment environment,
+        Guid? researcherId = null,
+        string? externalId = null)
     {
         if (!environment.IsDevelopment())
         {
@@ -41,15 +45,26 @@ public static class AuthEndpoints
         string issuer = configuration["Jwt:Issuer"] ?? "OpenMedSphere-Dev";
         string audience = configuration["Jwt:Audience"] ?? "OpenMedSphere-Dev";
 
+        // externalId = JWT NameIdentifier (used for registration binding to Researcher.ExternalId)
+        // researcherId = internal GUID (used for all post-registration endpoints via oms:researcher_id claim)
+        // For registration: provide externalId only (omit researcherId)
+        // For post-registration: provide both (researcherId from the created Researcher, externalId from registration)
+        var effectiveExternalId = externalId ?? Guid.CreateVersion7().ToString();
+
         SymmetricSecurityKey securityKey = new(Encoding.UTF8.GetBytes(key));
         SigningCredentials credentials = new(securityKey, SecurityAlgorithms.HmacSha256);
 
-        Claim[] claims =
+        List<Claim> claims =
         [
-            new Claim(ClaimTypes.NameIdentifier, Guid.CreateVersion7().ToString()),
+            new Claim(ClaimTypes.NameIdentifier, effectiveExternalId),
             new Claim(ClaimTypes.Name, "dev-user"),
             new Claim(ClaimTypes.Role, "Admin")
         ];
+
+        if (researcherId.HasValue)
+        {
+            claims.Add(new Claim(Extensions.ClaimsPrincipalExtensions.ResearcherIdClaimType, researcherId.Value.ToString()));
+        }
 
         JwtSecurityToken token = new(
             issuer: issuer,
