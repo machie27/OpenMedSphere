@@ -17,11 +17,11 @@ internal sealed class PatientDataRepository(ApplicationDbContext dbContext)
     {
         // Uses ToLower().Contains() instead of EF.Functions.ILike — EF Core 10 + Npgsql parameterizes
         // Contains() so user-supplied wildcards are safe, and both generate full-table scans anyway.
-        var diagnosisLower = diagnosis.ToLower();
+        var diagnosisLower = diagnosis.ToLowerInvariant();
 
         return await DbSet
             .Where(p => p.PrimaryDiagnosis != null &&
-                        p.PrimaryDiagnosis.ToLower().Contains(diagnosisLower))
+                        p.PrimaryDiagnosis.ToLowerInvariant().Contains(diagnosisLower))
             .ToListAsync(cancellationToken);
     }
 

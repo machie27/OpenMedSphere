@@ -84,8 +84,10 @@ public static class DependencyInjection
         if (icd11Options.IsConfigured)
         {
             // When ICD-11 API is configured, register the API-backed provider.
-            // Singleton lifetime preserves token caching and SemaphoreSlim coordination.
-            services.AddSingleton<Icd11AuthenticationHandler>();
+            // DelegatingHandler must be transient — HttpClientFactory creates a new instance per pipeline.
+            // Token caching and SemaphoreSlim coordination are instance-level (handler is long-lived
+            // via HttpClientFactory's handler pool, not via DI lifetime).
+            services.AddTransient<Icd11AuthenticationHandler>();
 
             services.AddHttpClient<IMedicalTerminologyProvider, Icd11TerminologyProvider>(client =>
             {

@@ -31,11 +31,11 @@ internal sealed class ResearchStudyRepository(ApplicationDbContext dbContext)
     {
         // Uses ToLower().Contains() instead of EF.Functions.ILike — EF Core 10 + Npgsql parameterizes
         // Contains() so user-supplied wildcards are safe, and both generate full-table scans anyway.
-        var areaLower = researchArea.ToLower();
+        var areaLower = researchArea.ToLowerInvariant();
 
         return await DbSet
             .Where(r => r.ResearchArea != null &&
-                        r.ResearchArea.ToLower().Contains(areaLower))
+                        r.ResearchArea.ToLowerInvariant().Contains(areaLower))
             .ToListAsync(cancellationToken);
     }
 }

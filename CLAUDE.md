@@ -179,7 +179,7 @@ Follow formatting in `.editorconfig` and `.github/copilot-instructions.md`:
 - **C# Version**: Always use C# 14 features (latest version)
 - **Nullable Reference Types**: Always enabled. Declare non-nullable by default, check for null at entry points
 - **Null Checks**: Use `is null` or `is not null` (NEVER `== null` or `!= null`). Exception: EF Core LINQ expression trees require `!= null` / `== null` because `is` pattern matching is not supported in expression trees
-- **Namespaces**: Use block-scoped namespace declarations (per `.editorconfig`)
+- **Namespaces**: Use file-scoped namespace declarations (per `.editorconfig`)
 - **var Usage**: Prefer `var` when the type is apparent (`csharp_style_var_*` = true)
 - **Pattern Matching**: Use pattern matching and switch expressions wherever possible
 - **Member Names**: Use `nameof()` instead of string literals

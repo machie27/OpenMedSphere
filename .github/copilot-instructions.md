@@ -7,7 +7,7 @@ General
 Formatting
 
  * Apply code-formatting style defined in .editorconfig.
- * Use block-scoped namespace declarations (per .editorconfig) and single-line using directives.
+ * Use file-scoped namespace declarations (per .editorconfig) and single-line using directives.
  * Insert a newline before the opening curly brace of any code block (e.g., after if, for, while, foreach, using, try, etc.).
  * Ensure that the final return statement of a method is on its own line.
  * Use pattern matching and switch expressions wherever possible.
