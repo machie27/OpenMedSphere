@@ -1,0 +1,42 @@
+version: 2
+updates:
+  # NuGet packages (.NET)
+  - package-ecosystem: "nuget"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    labels:
+      - "infrastructure"
+      - "P3"
+    groups:
+      aspire:
+        patterns:
+          - "Aspire.*"
+      efcore:
+        patterns:
+          - "Microsoft.EntityFrameworkCore*"
+          - "Npgsql*"
+      opentelemetry:
+        patterns:
+          - "OpenTelemetry*"
+      aspnetcore:
+        patterns:
+          - "Microsoft.AspNetCore*"
+      testing:
+        patterns:
+          - "xunit*"
+          - "Moq"
+          - "Microsoft.NET.Test.Sdk"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "infrastructure"
+      - "P3"
