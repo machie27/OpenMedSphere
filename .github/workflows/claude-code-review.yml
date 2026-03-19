@@ -5,7 +5,7 @@ name: PR Review with Progress Tracking
 
 on:
   pull_request:
-    types: [opened, ready_for_review, reopened, review_requested]
+    types: [review_requested]
 
 jobs:
   review-with-tracking:
