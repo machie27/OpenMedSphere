@@ -11,7 +11,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Assign PR to repository owner
-        run: gh pr edit "$PR_NUMBER" --add-assignee machie27
+        run: gh pr edit "$PR_NUMBER" --add-assignee machie27 --repo "${{ github.repository }}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
