@@ -1,0 +1,3 @@
+# Workflow files require repo owner approval
+/.github/workflows/ @machie27
+/.github/CODEOWNERS @machie27
