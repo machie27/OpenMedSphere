@@ -4,7 +4,7 @@
   </PropertyGroup>
   <ItemGroup>
     <!--API Documentation-->
-    <PackageVersion Include="Scalar.AspNetCore" Version="2.13.20" />
+    <PackageVersion Include="Scalar.AspNetCore" Version="2.13.22" />
     <!--ASP.NET Core-->
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.5" />
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.5" />
