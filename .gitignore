@@ -430,3 +430,6 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# LiteCache files from Visual Studio
+**/*.csproj.lscache
