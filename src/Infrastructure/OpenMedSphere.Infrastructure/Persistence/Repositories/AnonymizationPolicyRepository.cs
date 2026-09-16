@@ -14,6 +14,7 @@ internal sealed class AnonymizationPolicyRepository(ApplicationDbContext dbConte
     public async Task<IReadOnlyList<AnonymizationPolicy>> GetActivePoliciesAsync(
         CancellationToken cancellationToken = default) =>
         await DbSet
+            .AsNoTracking()
             .Where(a => a.IsActive)
             .ToListAsync(cancellationToken);
 }

@@ -21,6 +21,7 @@ internal sealed class ResearchStudyRepository(ApplicationDbContext dbContext)
     public async Task<IReadOnlyList<ResearchStudy>> GetActiveStudiesAsync(
         CancellationToken cancellationToken = default) =>
         await DbSet
+            .AsNoTracking()
             .Where(r => r.IsActive)
             .ToListAsync(cancellationToken);
 
@@ -34,6 +35,7 @@ internal sealed class ResearchStudyRepository(ApplicationDbContext dbContext)
         var areaLower = researchArea.ToLowerInvariant();
 
         return await DbSet
+            .AsNoTracking()
             .Where(r => r.ResearchArea != null &&
                         r.ResearchArea.ToLowerInvariant().Contains(areaLower))
             .ToListAsync(cancellationToken);
