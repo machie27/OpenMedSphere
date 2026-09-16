@@ -20,6 +20,7 @@ internal sealed class PatientDataRepository(ApplicationDbContext dbContext)
         var diagnosisLower = diagnosis.ToLowerInvariant();
 
         return await DbSet
+            .AsNoTracking()
             .Where(p => p.PrimaryDiagnosis != null &&
                         p.PrimaryDiagnosis.ToLowerInvariant().Contains(diagnosisLower))
             .ToListAsync(cancellationToken);
@@ -29,6 +30,7 @@ internal sealed class PatientDataRepository(ApplicationDbContext dbContext)
     public async Task<IReadOnlyList<PatientData>> GetAnonymizedAsync(
         CancellationToken cancellationToken = default) =>
         await DbSet
+            .AsNoTracking()
             .Where(p => p.IsAnonymized)
             .ToListAsync(cancellationToken);
 }

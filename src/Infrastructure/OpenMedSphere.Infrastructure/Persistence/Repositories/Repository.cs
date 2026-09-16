@@ -20,12 +20,16 @@ internal abstract class Repository<TEntity, TId>(ApplicationDbContext dbContext)
     protected DbSet<TEntity> DbSet => DbContext.Set<TEntity>();
 
     /// <inheritdoc />
+    /// <remarks>
+    /// Intentionally tracked: this is the entry point for command handlers that load an
+    /// aggregate, mutate it and persist via <see cref="IUnitOfWork"/>. Do not add AsNoTracking here.
+    /// </remarks>
     public async Task<TEntity?> GetByIdAsync(TId id, CancellationToken cancellationToken = default) =>
         await DbSet.FirstOrDefaultAsync(e => e.Id.Equals(id), cancellationToken);
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<TEntity>> GetAllAsync(CancellationToken cancellationToken = default) =>
-        await DbSet.ToListAsync(cancellationToken);
+        await DbSet.AsNoTracking().ToListAsync(cancellationToken);
 
     /// <inheritdoc />
     public async Task AddAsync(TEntity entity, CancellationToken cancellationToken = default) =>
@@ -43,7 +47,7 @@ internal abstract class Repository<TEntity, TId>(ApplicationDbContext dbContext)
     public async Task<IReadOnlyList<TEntity>> FindAsync(
         ISpecification<TEntity> specification,
         CancellationToken cancellationToken = default) =>
-        await SpecificationEvaluator.GetQuery(DbSet.AsQueryable(), specification)
+        await SpecificationEvaluator.GetQuery(DbSet.AsNoTracking(), specification)
             .ToListAsync(cancellationToken);
 
     /// <inheritdoc />
